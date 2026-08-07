@@ -1,0 +1,230 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens. Everything under `--brand-*` is deliberately given a
+ * neutral default here and then OVERRIDDEN per-request by an inline
+ * <style> tag in app/layout.tsx, populated from the `event_settings`
+ * table. Never hardcode a specific customer's colors in component code --
+ * components should only ever reference these variables/utilities.
+ */
+:root {
+  /* Dark, near-black elevated surface tiers -- not pure #000. The gradient
+     is the accent, this does the heavy lifting. */
+  --surface-0: #08080c;
+  --surface-1: #101018;
+  --surface-2: #191924;
+  --surface-3: #23232f;
+  --border-subtle: #2a2a38;
+
+  --text-primary: #f4f4f8;
+  --text-secondary: #a6a6b8;
+  --text-muted: #74748a;
+
+  --danger: #f87171;
+  --success: #4ade80;
+  --warning: #fbbf24;
+
+  /* Neutral placeholders until event_settings loads real brand colors. */
+  --brand-primary: #6366f1;
+  --brand-secondary: #8b5cf6;
+  --brand-accent: #22d3ee;
+  --brand-gradient: linear-gradient(
+    135deg,
+    var(--brand-primary) 0%,
+    var(--brand-secondary) 55%,
+    var(--brand-accent) 100%
+  );
+
+  --radius-card: 1rem;
+  --tap-target: 44px;
+}
+
+@theme inline {
+  --color-surface-0: var(--surface-0);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-border-subtle: var(--border-subtle);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-secondary: var(--brand-secondary);
+  --color-brand-accent: var(--brand-accent);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  --radius-card: var(--radius-card);
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--surface-0);
+    color: var(--text-primary);
+  }
+
+  /* Visible keyboard focus state everywhere, regardless of how stylized a
+     control is -- non-negotiable accessibility floor. */
+  :focus-visible {
+    outline: 2px solid var(--brand-accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Tap targets >= 44x44px throughout: this is a phone-in-hand app used
+     quickly on a busy show floor. */
+  button,
+  a[role="button"],
+  input,
+  select,
+  textarea {
+    min-height: var(--tap-target);
+  }
+}
+
+@layer utilities {
+  /* Subtle wash at the top of key screens -- accent, not wallpaper. */
+  .brand-wash {
+    background: radial-gradient(
+      120% 60% at 50% -20%,
+      color-mix(in srgb, var(--brand-primary) 28%, transparent) 0%,
+      transparent 70%
+    );
+  }
+
+  /* Glow behind the Scan button. */
+  .brand-glow {
+    position: relative;
+  }
+  .brand-glow::before {
+    content: "";
+    position: absolute;
+    inset: -28%;
+    background: var(--brand-gradient);
+    filter: blur(32px);
+    opacity: 0.55;
+    border-radius: 999px;
+    z-index: -1;
+  }
+
+  .brand-gradient-text {
+    background: var(--brand-gradient);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+
+  .brand-gradient-border {
+    border-image: var(--brand-gradient) 1;
+  }
+}
+
+/* Signature motif: corner-bracket scan frame + animated scan-line. Reused
+   (in spirit) by the Scan button's idle pulse and loading states so the
+   app has a visual identity beyond "dark theme with rounded cards." */
+.scan-frame {
+  position: relative;
+}
+
+.scan-frame__corner {
+  position: absolute;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 4px solid var(--brand-accent);
+}
+.scan-frame__corner--tl {
+  top: 0;
+  left: 0;
+  border-right: none;
+  border-bottom: none;
+  border-top-left-radius: 12px;
+}
+.scan-frame__corner--tr {
+  top: 0;
+  right: 0;
+  border-left: none;
+  border-bottom: none;
+  border-top-right-radius: 12px;
+}
+.scan-frame__corner--bl {
+  bottom: 0;
+  left: 0;
+  border-right: none;
+  border-top: none;
+  border-bottom-left-radius: 12px;
+}
+.scan-frame__corner--br {
+  bottom: 0;
+  right: 0;
+  border-left: none;
+  border-top: none;
+  border-bottom-right-radius: 12px;
+}
+
+.scan-frame__line {
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  height: 2px;
+  background: var(--brand-gradient);
+  box-shadow: 0 0 12px 1px var(--brand-accent);
+  animation: scan-line 2.4s ease-in-out infinite;
+}
+
+@keyframes scan-line {
+  0% {
+    top: 6%;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  50% {
+    top: 94%;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    top: 6%;
+    opacity: 0;
+  }
+}
+
+.scan-pulse {
+  animation: scan-pulse 3s ease-in-out infinite;
+}
+
+@keyframes scan-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--brand-accent) 45%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 18px color-mix(in srgb, var(--brand-accent) 0%, transparent);
+  }
+}
+
+/* Respect prefers-reduced-motion for the scan-line/scan-region animation
+   and any other motion in the app -- non-negotiable. */
+@media (prefers-reduced-motion: reduce) {
+  .scan-frame__line,
+  .scan-pulse,
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

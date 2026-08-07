@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+.next/
+dist/
+*.tsbuildinfo
+
+# Turborepo
+.turbo/
+
+# Drizzle
+packages/db/drizzle/
+
+# Env files
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Local uploads (dev fallback storage)
+.uploads/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Editor/OS
+.DS_Store
+.vscode/
+.idea/

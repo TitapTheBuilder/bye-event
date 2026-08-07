@@ -1,0 +1,107 @@
+@import "tailwindcss";
+
+/*
+ * Same design-token contract as apps/exhibitor: --brand-* variables are
+ * neutral placeholders here and get overridden per-request by an inline
+ * <style> tag in app/layout.tsx, sourced from the event_settings table.
+ * Never hardcode a specific customer's colors in component code.
+ */
+:root {
+  --surface-0: #08080c;
+  --surface-1: #101018;
+  --surface-2: #191924;
+  --surface-3: #23232f;
+  --border-subtle: #2a2a38;
+
+  --text-primary: #f4f4f8;
+  --text-secondary: #a6a6b8;
+  --text-muted: #74748a;
+
+  --danger: #f87171;
+  --success: #4ade80;
+  --warning: #fbbf24;
+
+  --brand-primary: #6366f1;
+  --brand-secondary: #8b5cf6;
+  --brand-accent: #22d3ee;
+  --brand-gradient: linear-gradient(
+    135deg,
+    var(--brand-primary) 0%,
+    var(--brand-secondary) 55%,
+    var(--brand-accent) 100%
+  );
+
+  --radius-card: 1rem;
+  --tap-target: 44px;
+}
+
+@theme inline {
+  --color-surface-0: var(--surface-0);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-border-subtle: var(--border-subtle);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-secondary: var(--brand-secondary);
+  --color-brand-accent: var(--brand-accent);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--surface-0);
+    color: var(--text-primary);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--brand-accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  button,
+  a[role="button"] {
+    min-height: 36px;
+  }
+}
+
+@layer utilities {
+  .brand-wash {
+    background: radial-gradient(
+      120% 60% at 50% -20%,
+      color-mix(in srgb, var(--brand-primary) 22%, transparent) 0%,
+      transparent 70%
+    );
+  }
+
+  .brand-gradient-text {
+    background: var(--brand-gradient);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
