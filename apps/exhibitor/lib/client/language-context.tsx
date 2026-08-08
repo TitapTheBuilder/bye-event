@@ -27,21 +27,36 @@ const STORAGE_KEY = "exhibition-lang";
 const dictionaries = { en, fa } as const;
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Language>(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored === "fa" || stored === "en") return stored;
-    }
-    return "en";
-  });
+  // Keep the server and first client render identical. Reading localStorage
+  // in the state initializer causes hydration mismatches on devices that
+  // previously selected Persian, which can leave top-bar controls inert.
+  const [lang, setLangState] = useState<Language>("en");
+  const [storageLoaded, setStorageLoaded] = useState(false);
 
   const dir: "ltr" | "rtl" = lang === "fa" ? "rtl" : "ltr";
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, lang);
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored === "fa" || stored === "en") setLangState(stored);
+    } catch {
+      // Storage may be blocked in private/restricted browser modes. Language
+      // switching must still work for the current session.
+    } finally {
+      setStorageLoaded(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!storageLoaded) return;
+    try {
+      localStorage.setItem(STORAGE_KEY, lang);
+    } catch {
+      // Keep the in-memory language even when persistence is unavailable.
+    }
     document.documentElement.dir = dir;
     document.documentElement.lang = lang;
-  }, [lang, dir]);
+  }, [lang, dir, storageLoaded]);
 
   const setLang = useCallback((newLang: Language) => {
     setLangState(newLang);

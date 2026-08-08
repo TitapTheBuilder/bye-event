@@ -75,6 +75,25 @@ export const visits = pgTable(
   ],
 );
 
+export const visitSyncEvents = pgTable(
+  "visit_sync_events",
+  {
+    localId: uuid("local_id").primaryKey(),
+    exhibitorId: uuid("exhibitor_id")
+      .notNull()
+      .references(() => exhibitors.id),
+    visitorId: uuid("visitor_id")
+      .notNull()
+      .references(() => visitors.id),
+    scannedAt: timestamp("scanned_at", { withTimezone: true }).notNull(),
+    processedAt: timestamp("processed_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("visit_sync_events_exhibitor_id_idx").on(t.exhibitorId),
+    index("visit_sync_events_visitor_id_idx").on(t.visitorId),
+  ],
+);
+
 export const admins = pgTable("admins", {
   id: uuid("id")
     .primaryKey()
@@ -122,6 +141,7 @@ export type NewExhibitor = typeof exhibitors.$inferInsert;
 export type Visitor = typeof visitors.$inferSelect;
 export type NewVisitor = typeof visitors.$inferInsert;
 export type Visit = typeof visits.$inferSelect;
+export type VisitSyncEvent = typeof visitSyncEvents.$inferSelect;
 export type Admin = typeof admins.$inferSelect;
 export type NewAdmin = typeof admins.$inferInsert;
 export type EventSettings = typeof eventSettings.$inferSelect;

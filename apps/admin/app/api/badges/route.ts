@@ -5,6 +5,8 @@ import { generateBadgePdf } from "@/lib/pdf/badges";
 import { requireAdminSession, UnauthorizedError } from "@/lib/session";
 import { NextResponse } from "next/server";
 
+export const runtime = "nodejs";
+
 /**
  * Print-ready badge PDF export (§7): two distinct templates (invited:
  * name + company + QR; guest: QR only). QR generation/mapping is fully

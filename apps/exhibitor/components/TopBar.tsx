@@ -12,24 +12,28 @@ export function TopBar({
   logoUrl: string | null;
 }) {
   return (
-    <header className="brand-wash sticky top-0 z-40 border-b border-border-subtle bg-surface-0/80 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-lg items-center justify-between px-4">
-        <UTMark />
-        <Link href="/" className="flex items-center gap-2" aria-label="Home">
+    <header className="brand-wash sticky top-0 z-50 isolate border-b border-border-subtle bg-surface-0/80 backdrop-blur">
+      <div className="mx-auto grid h-16 max-w-lg grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-4">
+        <UTMark className="shrink-0" />
+        <Link
+          href="/"
+          className="flex min-w-0 items-center justify-center overflow-hidden"
+          aria-label="Home"
+        >
           {logoUrl ? (
             <Image
               src={logoUrl}
               alt={businessName ?? "Event logo"}
               width={112}
               height={32}
-              className="h-8 w-auto object-contain"
+              className="h-8 max-w-full w-auto object-contain"
               unoptimized
             />
           ) : businessName ? (
-            <span className="text-sm font-semibold text-text-primary">{businessName}</span>
+            <span className="truncate text-sm font-semibold text-text-primary">{businessName}</span>
           ) : null}
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="relative z-10 flex shrink-0 items-center gap-2">
           <LanguageToggle />
           <AccountBadge />
         </div>

@@ -1,16 +1,15 @@
 import { and, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm";
-import type { Database } from "./client";
-import { exhibitors, type Visit, visitors, visits } from "./schema";
+import type { Database, DatabaseTransaction } from "./client";
+import { exhibitors, type Visit, visitors, visits, visitSyncEvents } from "./schema";
 
 /**
  * The only way a Visit row should ever be written. Idempotent upsert on the
  * (exhibitorId, visitorId) composite primary key: a re-scan of the same
  * pair bumps scan_count/last_scanned_at instead of throwing a unique
- * violation. This is also what makes retried/duplicate sync requests from
- * the offline queue safe to replay.
+ * violation. Event-level retry idempotency is added by syncVisitEvent below.
  */
 export async function upsertVisit(
-  db: Database,
+  db: Database | DatabaseTransaction,
   exhibitorId: string,
   visitorId: string,
   scannedAt?: Date,
@@ -36,6 +35,32 @@ export async function upsertVisit(
     .returning();
   if (!row) throw new Error("Failed to upsert visit");
   return row;
+}
+
+/**
+ * Atomically records a client scan event and updates its Visit. The localId
+ * primary key is the event idempotency key: replaying the same request after
+ * a lost response returns success without incrementing scan_count again.
+ */
+export async function syncVisitEvent(
+  db: Database,
+  localId: string,
+  exhibitorId: string,
+  visitorId: string,
+  scannedAt: Date,
+): Promise<{ duplicate: boolean }> {
+  return db.transaction(async (tx) => {
+    const [insertedEvent] = await tx
+      .insert(visitSyncEvents)
+      .values({ localId, exhibitorId, visitorId, scannedAt })
+      .onConflictDoNothing({ target: visitSyncEvents.localId })
+      .returning({ localId: visitSyncEvents.localId });
+
+    if (!insertedEvent) return { duplicate: true };
+
+    await upsertVisit(tx, exhibitorId, visitorId, scannedAt);
+    return { duplicate: false };
+  });
 }
 
 /**

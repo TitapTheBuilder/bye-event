@@ -13,7 +13,7 @@ export function LanguageToggle({ className = "" }: { className?: string }) {
     <button
       type="button"
       onClick={() => setLang(lang === "en" ? "fa" : "en")}
-      className={`flex items-center gap-1 rounded-full border border-border-subtle bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-text-primary transition-colors hover:bg-surface-3 ${className}`}
+      className={`relative z-10 flex min-h-11 min-w-11 touch-manipulation items-center justify-center gap-1 rounded-full border border-border-subtle bg-surface-2 px-2.5 py-1.5 text-xs font-semibold text-text-primary transition-colors hover:bg-surface-3 ${className}`}
       aria-label={lang === "en" ? "Switch to Persian" : "Switch to English"}
     >
       <span className="inline-block w-4 text-center">{lang === "en" ? "🌐" : "🌐"}</span>

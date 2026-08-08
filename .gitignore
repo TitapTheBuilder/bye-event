@@ -12,6 +12,9 @@ dist/
 # Drizzle
 packages/db/drizzle/
 
+# Local trusted-development TLS certificates
+**/.certs/
+
 # Env files
 .env
 .env.local

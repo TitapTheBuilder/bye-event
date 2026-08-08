@@ -16,7 +16,7 @@ export function AccountBadge() {
     return (
       <Link
         href="/login"
-        className="flex items-center rounded-full bg-surface-2 px-3 py-2 text-sm font-medium text-text-primary hover:bg-surface-3"
+        className="relative z-10 flex min-h-11 touch-manipulation items-center rounded-full bg-surface-2 px-3 py-2 text-sm font-medium text-text-primary hover:bg-surface-3"
       >
         {t("account.signIn")}
       </Link>
@@ -34,7 +34,7 @@ export function AccountBadge() {
     <Link
       href="/profile"
       aria-label={`Profile: ${exhibitor.name}`}
-      className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold text-white"
+      className="relative z-10 flex h-11 w-11 touch-manipulation items-center justify-center rounded-full text-sm font-semibold text-white"
       style={{ background: "var(--brand-gradient)" }}
     >
       {initials}

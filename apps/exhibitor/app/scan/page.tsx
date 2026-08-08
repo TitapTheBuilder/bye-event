@@ -4,40 +4,70 @@ import { ScanFrameOverlay } from "@/components/ScanFrameOverlay";
 import { recordScan } from "@/lib/offline/scan";
 import { useTranslation } from "@/lib/client/language-context";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type QrScannerType from "qr-scanner";
 
-type CameraState = "starting" | "active" | "denied" | "unavailable";
+type CameraState = "starting" | "active" | "denied" | "insecure" | "unavailable";
 
 export default function ScanPage() {
   const router = useRouter();
   const { t } = useTranslation();
   const videoRef = useRef<HTMLVideoElement>(null);
   const scannerRef = useRef<QrScannerType | null>(null);
+  const processingRef = useRef(false);
   const [cameraState, setCameraState] = useState<CameraState>("starting");
   const [hasFlash, setHasFlash] = useState(false);
   const [flashOn, setFlashOn] = useState(false);
   const [manualToken, setManualToken] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const handleDecoded = useCallback(
+    async (rawQrToken: string) => {
+      const qrToken = rawQrToken.trim();
+      if (!qrToken || processingRef.current) return;
+
+      // QR decoders can emit multiple callbacks before stop() settles. React
+      // state updates are asynchronous, so use a ref as the synchronous lock.
+      processingRef.current = true;
+      setIsProcessing(true);
+      const scanner = scannerRef.current;
+      scanner?.pause(true);
+      scanner?.destroy();
+      if (scannerRef.current === scanner) scannerRef.current = null;
+
+      // Write to the local outbox immediately, unconditionally -- before any
+      // network call, before checking login state.
+      await recordScan(qrToken);
+      router.push(`/visitor/${encodeURIComponent(qrToken)}`);
+    },
+    [router],
+  );
+
   useEffect(() => {
     let cancelled = false;
+    let ownedScanner: QrScannerType | null = null;
 
     async function start() {
-      if (!videoRef.current) return;
+      if (!window.isSecureContext) {
+        setCameraState("insecure");
+        return;
+      }
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setCameraState("unavailable");
+        return;
+      }
 
       // qr-scanner uses the browser's native BarcodeDetector when
-      // available and TRANSPARENTLY falls back to its own JS/WASM (jsQR)
-      // decoder otherwise -- this is exactly the progressive-enhancement
-      // contract required for iOS Safari, where BarcodeDetector doesn't
-      // exist, without us ever hand-picking a path that could bit-rot.
+      // available and transparently falls back to its JS/WASM decoder on
+      // Safari/WebKit.
       const { default: QrScanner } = await import("qr-scanner");
+      const video = videoRef.current;
+      if (cancelled || !video) return;
 
       const scanner = new QrScanner(
-        videoRef.current,
+        video,
         (result) => {
-          if (cancelled) return;
-          void handleDecoded(result.data);
+          if (!cancelled) void handleDecoded(result.data);
         },
         {
           highlightScanRegion: false,
@@ -46,16 +76,23 @@ export default function ScanPage() {
         },
       );
 
+      ownedScanner = scanner;
       scannerRef.current = scanner;
 
       try {
         await scanner.start();
-        if (cancelled) return;
+        if (cancelled) {
+          scanner.pause(true);
+          scanner.destroy();
+          return;
+        }
         setCameraState("active");
         const flashSupported = await scanner.hasFlash().catch(() => false);
         if (!cancelled) setHasFlash(flashSupported);
       } catch (err) {
         if (cancelled) return;
+        scanner.destroy();
+        if (scannerRef.current === scanner) scannerRef.current = null;
         const name = err instanceof Error ? err.name : "";
         setCameraState(name === "NotAllowedError" ? "denied" : "unavailable");
       }
@@ -65,22 +102,20 @@ export default function ScanPage() {
 
     return () => {
       cancelled = true;
-      scannerRef.current?.stop();
-      scannerRef.current?.destroy();
-      scannerRef.current = null;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+      const scanner = ownedScanner;
+      ownedScanner = null;
+      if (scanner) {
+        scanner.pause(true);
+        scanner.destroy();
+        if (scannerRef.current === scanner) scannerRef.current = null;
+      }
 
-  async function handleDecoded(qrToken: string) {
-    if (isProcessing) return;
-    setIsProcessing(true);
-    scannerRef.current?.stop();
-    // Write to the local outbox immediately, unconditionally -- before any
-    // network call, before checking login state.
-    await recordScan(qrToken);
-    router.push(`/visitor/${encodeURIComponent(qrToken)}`);
-  }
+      const stream = videoRef.current?.srcObject;
+      if (stream instanceof MediaStream) {
+        for (const track of stream.getTracks()) track.stop();
+      }
+    };
+  }, [handleDecoded]);
 
   async function handleManualSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -97,11 +132,10 @@ export default function ScanPage() {
 
   return (
     <div className="relative flex min-h-[calc(100dvh-4rem-5rem)] flex-col bg-surface-0">
-      <div className="relative flex-1 overflow-hidden bg-black">
-        {/* biome-ignore lint/a11y/useMediaCaption: live camera feed, not prerecorded media */}
+      <div className="relative min-h-0 flex-1 overflow-hidden bg-black">
         <video
           ref={videoRef}
-          className="h-full w-full object-cover"
+          className="absolute inset-0 h-full w-full object-cover"
           muted
           playsInline
         />
@@ -113,12 +147,14 @@ export default function ScanPage() {
           </div>
         ) : null}
 
-        {cameraState === "denied" || cameraState === "unavailable" ? (
+        {cameraState === "denied" || cameraState === "insecure" || cameraState === "unavailable" ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-surface-0 px-8 text-center">
             <p className="text-text-primary">
               {cameraState === "denied"
                 ? t("scan.denied")
-                : t("scan.unavailable")}
+                : cameraState === "insecure"
+                  ? t("scan.httpsRequired")
+                  : t("scan.unavailable")}
             </p>
           </div>
         ) : null}

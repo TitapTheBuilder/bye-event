@@ -53,6 +53,11 @@ export async function getCachedVisitor(qrToken: string): Promise<CachedVisitor |
   return db.get("visitorCache", qrToken);
 }
 
+export async function removeCachedVisitor(qrToken: string): Promise<void> {
+  const db = await getDb();
+  await db.delete("visitorCache", qrToken);
+}
+
 // ---- visitOutbox -------------------------------------------------------
 
 export async function addOutboxEntry(entry: {
@@ -128,9 +133,36 @@ export async function clearOutboxEntryError(localId: string): Promise<void> {
   await db.put("visitOutbox", { ...existing, permanentError: false, lastError: undefined });
 }
 
-export async function removeOutboxEntry(localId: string): Promise<void> {
+/** Retry previously permanent failures once after a fresh authenticated
+ * session. This lets corrected/normalized tokens recover after an app update
+ * without continuously hammering truly unknown badges. */
+export async function clearAllOutboxEntryErrors(): Promise<void> {
   const db = await getDb();
-  await db.delete("visitOutbox", localId);
+  const tx = db.transaction("visitOutbox", "readwrite");
+  let cursor = await tx.store.openCursor();
+  while (cursor) {
+    if (cursor.value.permanentError) {
+      await cursor.update({
+        ...cursor.value,
+        permanentError: false,
+        lastError: undefined,
+      });
+    }
+    cursor = await cursor.continue();
+  }
+  await tx.done;
+}
+
+export async function removeOutboxEntriesByQrToken(qrToken: string): Promise<void> {
+  const db = await getDb();
+  const canonicalToken = qrToken.trim();
+  const tx = db.transaction("visitOutbox", "readwrite");
+  let cursor = await tx.store.openCursor();
+  while (cursor) {
+    if (cursor.value.qrToken.trim() === canonicalToken) await cursor.delete();
+    cursor = await cursor.continue();
+  }
+  await tx.done;
 }
 
 export async function getOutboxEntryByQrToken(qrToken: string): Promise<OutboxEntry | undefined> {

@@ -135,6 +135,12 @@
    app has a visual identity beyond "dark theme with rounded cards." */
 .scan-frame {
   position: relative;
+  width: min(78vw, 22rem);
+  max-width: 100%;
+  aspect-ratio: 1;
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--surface-0) 8%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--brand-accent) 18%, transparent);
 }
 
 .scan-frame__corner {

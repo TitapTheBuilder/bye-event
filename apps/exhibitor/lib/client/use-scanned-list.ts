@@ -6,8 +6,9 @@ import {
   addOutboxEntry,
   getAllOutboxEntries,
   getCachedVisitor,
-  removeOutboxEntry,
+  removeOutboxEntriesByQrToken,
 } from "@/lib/offline/idb";
+import { getLatestOutboxEntriesByQrToken } from "@/lib/offline/outbox";
 import { syncEngine } from "@/lib/offline/sync-engine";
 
 export interface ScannedListItem {
@@ -55,7 +56,7 @@ export function useScannedList() {
           if (res.ok) {
             const data = (await res.json()) as { visits: ServerVisitRow[] };
             for (const row of data.visits) {
-              seenQrTokens.add(row.qrToken);
+              seenQrTokens.add(row.qrToken.trim());
               merged.push({
                 key: row.visitorId,
                 qrToken: row.qrToken,
@@ -79,13 +80,19 @@ export function useScannedList() {
       // Always fold in local outbox entries not yet reflected server-side
       // (or all of them, when signed out/offline) -- scans made seconds
       // ago must show up immediately, not just after a successful sync.
-      const outbox = await getAllOutboxEntries();
+      const outbox = getLatestOutboxEntriesByQrToken(
+        await getAllOutboxEntries(),
+        seenQrTokens,
+      );
       for (const entry of outbox) {
-        if (seenQrTokens.has(entry.qrToken)) continue;
-        const cached = await getCachedVisitor(entry.qrToken);
+        const qrToken = entry.qrToken.trim();
+        seenQrTokens.add(qrToken);
+        const cached =
+          (await getCachedVisitor(qrToken)) ??
+          (qrToken === entry.qrToken ? undefined : await getCachedVisitor(entry.qrToken));
         merged.push({
           key: `local:${entry.localId}`,
-          qrToken: entry.qrToken,
+          qrToken,
           localId: entry.localId,
           name: cached?.name ?? null,
           company: cached?.company ?? null,
@@ -125,9 +132,9 @@ export function useScannedList() {
       if (item.visitorId) {
         await fetch(`/api/visits/${item.visitorId}`, { method: "DELETE" });
       }
-      if (item.localId) {
-        await removeOutboxEntry(item.localId);
-      }
+      // Remove every local event for this token, including older entries
+      // hidden by list deduplication, so deleting cannot reveal/re-sync one.
+      await removeOutboxEntriesByQrToken(item.qrToken);
 
       return async () => {
         // Undo = re-scan: the cleanest way to restore the relationship,

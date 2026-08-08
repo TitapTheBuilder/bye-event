@@ -1,9 +1,11 @@
 import type { VisitSyncResponse } from "@repo/shared/schemas";
 import {
+  clearAllOutboxEntryErrors,
   getSyncableOutboxEntries,
   getUnsyncedOutboxEntries,
   markOutboxEntriesSynced,
   markOutboxEntryError,
+  removeCachedVisitor,
 } from "./idb";
 import type { SyncStatus } from "./types";
 
@@ -65,7 +67,10 @@ export class SyncEngine {
     this.isAuthenticated = value;
     if (value && !wasAuthenticated) {
       this.backoffMs = this.initialBackoffMs;
-      this.requestFlush();
+      // A prior app version may have permanently parked a token that is now
+      // valid after normalization or an admin correction. Retry such entries
+      // once per authenticated session, then park true misses again.
+      void clearAllOutboxEntryErrors().finally(() => this.requestFlush());
     } else if (!value) {
       this.clearRetryTimer();
       void this.setStatus("signed-out");
@@ -143,16 +148,25 @@ export class SyncEngine {
         if (result.status === "synced") {
           syncedIds.push(result.localId);
         } else {
-          // "Visitor not found" can never succeed by itself retrying --
-          // everything else (transient server error) is worth retrying.
-          const permanent = result.error === "Visitor not found";
+          // Structured codes avoid coupling retry behavior to translated or
+          // rewritten error messages. Keep the legacy text fallback for
+          // responses from an older server during rolling deployments.
+          const permanent =
+            result.errorCode === "visitor_not_found" || result.error === "Visitor not found";
           await markOutboxEntryError(result.localId, result.error ?? "Sync failed", permanent);
+          if (permanent) {
+            const entry = entries.find((candidate) => candidate.localId === result.localId);
+            if (entry) await removeCachedVisitor(entry.qrToken);
+          }
         }
       }
       if (syncedIds.length > 0) await markOutboxEntriesSynced(syncedIds);
 
       this.backoffMs = this.initialBackoffMs;
       const remaining = await getUnsyncedOutboxEntries();
+      const retryable = await getSyncableOutboxEntries();
+      if (retryable.length > 0) this.scheduleRetry();
+      else this.clearRetryTimer();
       await this.setStatus(remaining.length > 0 ? "error" : "idle");
     } catch {
       await this.setStatus("error");

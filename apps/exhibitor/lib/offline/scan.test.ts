@@ -23,6 +23,16 @@ describe("recordScan", () => {
     requestFlushSpy.mockRestore();
   });
 
+  it("normalizes surrounding whitespace before writing the event", async () => {
+    vi.spyOn(syncEngine, "requestFlush").mockImplementation(() => {});
+
+    await recordScan("  tok-1\n");
+
+    const [entry] = await getAllOutboxEntries();
+    expect(entry?.qrToken).toBe("tok-1");
+    vi.restoreAllMocks();
+  });
+
   it("generates a distinct localId per scan, even of the same badge", async () => {
     vi.spyOn(syncEngine, "requestFlush").mockImplementation(() => {});
 

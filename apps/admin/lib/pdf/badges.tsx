@@ -1,6 +1,17 @@
 import type { EventSettings, Visitor } from "@repo/db";
 import { PLATFORM_CREDIT } from "@repo/shared/constants";
-import { Document, Image, Page, StyleSheet, Text, View, renderToBuffer } from "@react-pdf/renderer";
+import {
+  Document,
+  Font,
+  Image,
+  Page,
+  StyleSheet,
+  Text,
+  View,
+  renderToBuffer,
+} from "@react-pdf/renderer";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import QRCode from "qrcode";
 import { getLocalUploadPathFromUrl } from "@/lib/uploads";
 
@@ -20,12 +31,39 @@ const BADGE_GAP = 0.2 * PT_PER_IN;
 const BADGES_PER_ROW = 2;
 const ROWS_PER_PAGE = 4;
 const BADGES_PER_PAGE = BADGES_PER_ROW * ROWS_PER_PAGE;
+const PDF_FONT_FAMILY = "Noto Sans Arabic";
+const ARABIC_SCRIPT_PATTERN = /\p{Script=Arabic}/u;
+
+function resolveFontPath(filename: string): string {
+  const candidates = [
+    join(process.cwd(), "public", "fonts", filename),
+    join(process.cwd(), "apps", "admin", "public", "fonts", filename),
+  ];
+  const fontPath = candidates.find((candidate) => existsSync(candidate));
+  if (!fontPath) {
+    throw new Error(`Required badge PDF font is missing: ${filename}`);
+  }
+  return fontPath;
+}
+
+Font.register({
+  family: PDF_FONT_FAMILY,
+  fonts: [
+    { src: resolveFontPath("NotoSansArabic-Regular.ttf"), fontWeight: 400 },
+    { src: resolveFontPath("NotoSansArabic-Bold.ttf"), fontWeight: 700 },
+  ],
+});
+
+function containsArabicScript(value: string): boolean {
+  return ARABIC_SCRIPT_PATTERN.test(value);
+}
 
 const styles = StyleSheet.create({
   page: {
     padding: PAGE_MARGIN,
     flexDirection: "row",
     flexWrap: "wrap",
+    fontFamily: PDF_FONT_FAMILY,
   },
   badge: {
     width: BADGE_WIDTH,
@@ -67,6 +105,10 @@ const styles = StyleSheet.create({
     marginTop: 3,
     fontSize: 10,
     color: "#444444",
+  },
+  rtlText: {
+    direction: "rtl",
+    textAlign: "right",
   },
   typeTag: {
     marginTop: 8,
@@ -136,10 +178,36 @@ function InvitedBadgesDocument({ visitors, qrDataUrls, logoSource, businessName 
                 {logoSource ? (
                   <Image src={logoSource} style={styles.logo} />
                 ) : businessName ? (
-                  <Text style={styles.company}>{businessName}</Text>
+                  <Text
+                    style={
+                      containsArabicScript(businessName)
+                        ? [styles.company, styles.rtlText]
+                        : styles.company
+                    }
+                  >
+                    {businessName}
+                  </Text>
                 ) : null}
-                <Text style={styles.name}>{visitor.name ?? "Guest"}</Text>
-                {visitor.company ? <Text style={styles.company}>{visitor.company}</Text> : null}
+                <Text
+                  style={
+                    containsArabicScript(visitor.name ?? "")
+                      ? [styles.name, styles.rtlText]
+                      : styles.name
+                  }
+                >
+                  {visitor.name ?? "Guest"}
+                </Text>
+                {visitor.company ? (
+                  <Text
+                    style={
+                      containsArabicScript(visitor.company)
+                        ? [styles.company, styles.rtlText]
+                        : styles.company
+                    }
+                  >
+                    {visitor.company}
+                  </Text>
+                ) : null}
                 <Text style={styles.typeTag}>Invited</Text>
               </View>
               <Image src={qrDataUrls.get(visitor.qrToken)} style={styles.qr} />

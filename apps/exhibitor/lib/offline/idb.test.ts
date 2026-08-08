@@ -3,6 +3,7 @@ import {
   _clearAllForTests,
   addOutboxEntry,
   cacheVisitor,
+  clearAllOutboxEntryErrors,
   clearOutboxEntryError,
   getAllOutboxEntries,
   getCachedVisitor,
@@ -10,6 +11,8 @@ import {
   getUnsyncedOutboxEntries,
   markOutboxEntriesSynced,
   markOutboxEntryError,
+  removeCachedVisitor,
+  removeOutboxEntriesByQrToken,
 } from "./idb";
 
 beforeEach(async () => {
@@ -34,6 +37,21 @@ describe("visitorCache", () => {
 
   it("returns undefined for an uncached token", async () => {
     expect(await getCachedVisitor("missing")).toBeUndefined();
+  });
+
+  it("removes a stale cached visitor rejected by the server", async () => {
+    await cacheVisitor({
+      qrToken: "tok-stale",
+      name: "Stale visitor",
+      company: null,
+      phoneNumber: null,
+      email: null,
+      visitorType: "invited",
+    });
+
+    await removeCachedVisitor("tok-stale");
+
+    expect(await getCachedVisitor("tok-stale")).toBeUndefined();
   });
 });
 
@@ -66,6 +84,17 @@ describe("visitOutbox", () => {
     expect(await getUnsyncedOutboxEntries()).toHaveLength(1);
   });
 
+  it("a new authenticated session can retry all previously permanent errors", async () => {
+    await addOutboxEntry({ localId: "a", qrToken: "tok-1", scannedAt: new Date().toISOString() });
+    await addOutboxEntry({ localId: "b", qrToken: "tok-2", scannedAt: new Date().toISOString() });
+    await markOutboxEntryError("a", "Visitor not found", true);
+    await markOutboxEntryError("b", "Visitor not found", true);
+
+    await clearAllOutboxEntryErrors();
+
+    expect(await getSyncableOutboxEntries()).toHaveLength(2);
+  });
+
   it("a manual retry clears a permanent error, making it syncable again", async () => {
     await addOutboxEntry({ localId: "a", qrToken: "tok-1", scannedAt: new Date().toISOString() });
     await markOutboxEntryError("a", "Visitor not found", true);
@@ -73,6 +102,16 @@ describe("visitOutbox", () => {
 
     await clearOutboxEntryError("a");
     expect(await getSyncableOutboxEntries()).toHaveLength(1);
+  });
+
+  it("removes all duplicate local events for a QR token", async () => {
+    await addOutboxEntry({ localId: "a", qrToken: "tok-1", scannedAt: new Date().toISOString() });
+    await addOutboxEntry({ localId: "b", qrToken: "  tok-1 ", scannedAt: new Date().toISOString() });
+    await addOutboxEntry({ localId: "c", qrToken: "tok-2", scannedAt: new Date().toISOString() });
+
+    await removeOutboxEntriesByQrToken("tok-1");
+
+    expect((await getAllOutboxEntries()).map((entry) => entry.localId)).toEqual(["c"]);
   });
 
   it("keeps transient errors syncable (they were never marked permanent)", async () => {

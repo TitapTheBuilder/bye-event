@@ -30,6 +30,7 @@ const en = {
   // ── Scan ─────────────────────────────────────────────
   "scan.starting": "Starting camera\u2026",
   "scan.denied": "Camera access was denied. Allow camera access, or enter a badge code manually below.",
+  "scan.httpsRequired": "Camera scanning requires HTTPS on mobile. Open the secure app URL, or enter a badge code manually below.",
   "scan.unavailable": "No camera available. Enter a badge code manually below.",
   "scan.cancel": "Cancel",
   "scan.torch": "Torch",
@@ -121,6 +122,7 @@ const fa: Record<keyof typeof en, string> = {
   // ── اسکن ─────────────────────────────────────────────
   "scan.starting": "در حال راه‌اندازی دوربین…",
   "scan.denied": "دسترسی دوربین رد شد. دسترسی دوربین را مجاز کنید یا کد نشان را به صورت دستی وارد کنید.",
+  "scan.httpsRequired": "اسکن با دوربین در موبایل به HTTPS نیاز دارد. نشانی امن برنامه را باز کنید یا کد نشان را دستی وارد کنید.",
   "scan.unavailable": "دوربینی در دسترس نیست. کد نشان را به صورت دستی وارد کنید.",
   "scan.cancel": "انصراف",
   "scan.torch": "فلش",

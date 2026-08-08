@@ -161,7 +161,14 @@ describe("SyncEngine", () => {
   it("marks a permanently-unresolvable entry (unknown qrToken) so it stops being auto-retried", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       jsonResponse({
-        results: [{ localId: "a", status: "error", error: "Visitor not found" }],
+        results: [
+          {
+            localId: "a",
+            status: "error",
+            error: "Visitor not found",
+            errorCode: "visitor_not_found",
+          },
+        ],
       }),
     );
     const engine = new SyncEngine(fetchMock as unknown as typeof fetch);
@@ -176,6 +183,52 @@ describe("SyncEngine", () => {
     // A second flush shouldn't even bother calling the network again for
     // an entry the server already told us can never succeed.
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("retries a transient per-entry server failure", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse({
+          results: [
+            { localId: "a", status: "error", error: "Sync failed", errorCode: "sync_failed" },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({ results: [{ localId: "a", status: "synced" }] }),
+      );
+    const engine = new SyncEngine(fetchMock as unknown as typeof fetch, {
+      initialBackoffMs: 20,
+      maxBackoffMs: 100,
+    });
+    await addOutboxEntry({ localId: "a", qrToken: "tok-1", scannedAt: new Date().toISOString() });
+    engine.setAuthenticated(true);
+
+    await engine.flush();
+    expect(engine.getStatus()).toBe("error");
+
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect((await getAllOutboxEntries())[0]?.synced).toBe(true);
+  });
+
+  it("retries a previously parked token once on the next authenticated session", async () => {
+    await addOutboxEntry({ localId: "a", qrToken: "tok-1", scannedAt: new Date().toISOString() });
+    const { markOutboxEntryError } = await import("./idb");
+    await markOutboxEntryError("a", "Visitor not found", true);
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({ results: [{ localId: "a", status: "synced" }] }),
+    );
+    const engine = new SyncEngine(fetchMock as unknown as typeof fetch);
+
+    engine.setAuthenticated(true);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    await engine.flush();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect((await getAllOutboxEntries())[0]?.synced).toBe(true);
   });
 
   it("notifies subscribers of status and pending-count changes", async () => {
