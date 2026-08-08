@@ -1,11 +1,12 @@
 "use client";
 
+import { useTranslation } from "@/lib/client/language-context";
 import { useState } from "react";
 
 const ENTITIES = [
-  { key: "visitors", label: "Visitors", description: "All invited and guest visitor records." },
-  { key: "exhibitors", label: "Exhibitors", description: "Booth staff accounts." },
-  { key: "visits", label: "Visits", description: "Every scan, with exhibitor and visitor names." },
+  { key: "visitors", labelKey: "export.visitors", descriptionKey: "export.visitorsDesc" },
+  { key: "exhibitors", labelKey: "export.exhibitors", descriptionKey: "export.exhibitorsDesc" },
+  { key: "visits", labelKey: "export.visits", descriptionKey: "export.visitsDesc" },
 ] as const;
 
 const FORMATS = ["csv", "xlsx", "json"] as const;
@@ -16,14 +17,15 @@ const FORMATS = ["csv", "xlsx", "json"] as const;
  * human-readable snapshots for the event team.
  */
 export default function ExportPage() {
+  const { t } = useTranslation();
   const [includeDeactivated, setIncludeDeactivated] = useState(false);
 
   return (
     <div className="flex max-w-3xl flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold text-text-primary">Data export</h1>
+        <h1 className="text-xl font-semibold text-text-primary">{t("export.title")}</h1>
         <p className="text-sm text-text-secondary">
-          Download a snapshot of visitors, exhibitors, or visits as CSV, XLSX, or JSON.
+          {t("export.subtitle")}
         </p>
       </div>
 
@@ -34,7 +36,7 @@ export default function ExportPage() {
           onChange={(e) => setIncludeDeactivated(e.target.checked)}
           className="h-4 w-4 rounded border-border-subtle"
         />
-        Include deactivated records
+        {t("export.includeDeactivated")}
       </label>
 
       <div className="flex flex-col gap-4">
@@ -44,8 +46,8 @@ export default function ExportPage() {
             className="flex flex-col gap-3 rounded-2xl border border-border-subtle bg-surface-1 p-5 sm:flex-row sm:items-center sm:justify-between"
           >
             <div>
-              <h2 className="font-medium text-text-primary">{entity.label}</h2>
-              <p className="text-sm text-text-secondary">{entity.description}</p>
+              <h2 className="font-medium text-text-primary">{t(entity.labelKey)}</h2>
+              <p className="text-sm text-text-secondary">{t(entity.descriptionKey)}</p>
             </div>
             <div className="flex gap-2">
               {FORMATS.map((format) => (

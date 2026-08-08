@@ -2,12 +2,14 @@
 
 import { FormField, inputClassName } from "@/components/FormField";
 import { useAuth } from "@/lib/client/auth-context";
+import { useTranslation } from "@/lib/client/language-context";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export default function SignupPage() {
   const { signup } = useAuth();
+  const { t } = useTranslation();
   const router = useRouter();
   const [form, setForm] = useState({ name: "", username: "", phoneNumber: "", password: "" });
   const [error, setError] = useState<string | null>(null);
@@ -29,15 +31,14 @@ export default function SignupPage() {
   return (
     <div className="flex flex-col gap-6 px-6 py-10">
       <div>
-        <h1 className="text-xl font-semibold text-text-primary">Create your account</h1>
+        <h1 className="text-xl font-semibold text-text-primary">{t("signup.title")}</h1>
         <p className="mt-1 text-sm text-text-secondary">
-          Any scans you&apos;ve already made on this device will save automatically once you sign
-          up.
+          {t("signup.subtitle")}
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <FormField label="Full name">
+        <FormField label={t("signup.name")}>
           <input
             className={inputClassName}
             value={form.name}
@@ -46,7 +47,7 @@ export default function SignupPage() {
             required
           />
         </FormField>
-        <FormField label="Username">
+        <FormField label={t("signup.username")}>
           <input
             className={inputClassName}
             value={form.username}
@@ -55,7 +56,7 @@ export default function SignupPage() {
             required
           />
         </FormField>
-        <FormField label="Phone number">
+        <FormField label={t("signup.phone")}>
           <input
             type="tel"
             className={inputClassName}
@@ -65,7 +66,7 @@ export default function SignupPage() {
             required
           />
         </FormField>
-        <FormField label="Password">
+        <FormField label={t("signup.password")}>
           <input
             type="password"
             className={inputClassName}
@@ -85,14 +86,14 @@ export default function SignupPage() {
           className="mt-2 rounded-xl py-3 font-semibold text-white disabled:opacity-60"
           style={{ background: "var(--brand-gradient)" }}
         >
-          {isSubmitting ? "Creating account…" : "Create account"}
+          {isSubmitting ? t("signup.submitting") : t("signup.submit")}
         </button>
       </form>
 
       <p className="text-center text-sm text-text-secondary">
-        Already have an account?{" "}
+        {t("signup.hasAccount")}{" "}
         <Link href="/login" className="font-medium text-brand-accent">
-          Sign in
+          {t("signup.signIn")}
         </Link>
       </p>
     </div>

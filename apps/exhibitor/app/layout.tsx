@@ -5,11 +5,12 @@ import { db, getEventSettings } from "@repo/db";
 import { PLATFORM_CREDIT } from "@repo/shared/constants";
 import { SerwistProvider } from "@serwist/turbopack/react";
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Vazirmatn } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+const vazirmatn = Vazirmatn({ variable: "--font-vazirmatn", subsets: ["arabic"] });
 
 export const metadata: Metadata = {
   title: "Badge Scanner",
@@ -48,7 +49,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const accent = safeHex(settings.accentColor, "#22d3ee");
 
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${vazirmatn.variable}`}>
       <body className="min-h-dvh font-sans antialiased">
         <style>
           {`:root { --brand-primary: ${primary}; --brand-secondary: ${secondary}; --brand-accent: ${accent}; }`}

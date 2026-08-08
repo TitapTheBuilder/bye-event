@@ -2,10 +2,12 @@
 
 import { FormField, inputClassName } from "@/components/FormField";
 import { useAuth } from "@/lib/client/auth-context";
+import { useTranslation } from "@/lib/client/language-context";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 export default function LoginPage() {
+  const { t } = useTranslation();
   const { login } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -29,11 +31,11 @@ export default function LoginPage() {
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center px-6">
-      <h1 className="text-xl font-semibold text-text-primary">Event Admin</h1>
-      <p className="mt-1 text-sm text-text-secondary">Sign in to manage this event.</p>
+      <h1 className="text-xl font-semibold text-text-primary">{t("login.title")}</h1>
+      <p className="mt-1 text-sm text-text-secondary">{t("login.subtitle")}</p>
 
       <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
-        <FormField label="Email">
+        <FormField label={t("login.email")}>
           <input
             type="email"
             className={inputClassName}
@@ -43,7 +45,7 @@ export default function LoginPage() {
             required
           />
         </FormField>
-        <FormField label="Password">
+        <FormField label={t("login.password")}>
           <input
             type="password"
             className={inputClassName}
@@ -62,7 +64,7 @@ export default function LoginPage() {
           className="mt-2 rounded-lg py-2.5 text-sm font-semibold text-white disabled:opacity-60"
           style={{ background: "var(--brand-gradient)" }}
         >
-          {isSubmitting ? "Signing in…" : "Sign in"}
+          {isSubmitting ? t("login.submitting") : t("login.submit")}
         </button>
       </form>
     </div>

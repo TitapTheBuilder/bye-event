@@ -2,16 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslation } from "@/lib/client/language-context";
+import type { TranslationKey } from "@/lib/i18n/translations";
 
-const ITEMS = [
-  { href: "/", label: "Home" },
-  { href: "/scan", label: "Scan" },
-  { href: "/scanned", label: "Scanned" },
-  { href: "/profile", label: "Profile" },
-] as const;
+const ITEMS: { href: string; labelKey: TranslationKey }[] = [
+  { href: "/", labelKey: "nav.home" },
+  { href: "/scan", labelKey: "nav.scan" },
+  { href: "/scanned", labelKey: "nav.scanned" },
+  { href: "/profile", labelKey: "nav.profile" },
+];
 
 export function BottomNav() {
   const pathname = usePathname();
+  const { t } = useTranslation();
 
   return (
     <nav
@@ -31,7 +34,7 @@ export function BottomNav() {
               aria-current={isActive ? "page" : undefined}
             >
               <NavIcon item={item.href} active={isActive} />
-              {item.label}
+              {t(item.labelKey)}
             </Link>
           );
         })}
@@ -40,7 +43,7 @@ export function BottomNav() {
   );
 }
 
-function NavIcon({ item, active }: { item: (typeof ITEMS)[number]["href"]; active: boolean }) {
+function NavIcon({ item, active }: { item: string; active: boolean }) {
   const stroke = active ? "var(--brand-accent)" : "currentColor";
   switch (item) {
     case "/":
@@ -89,5 +92,7 @@ function NavIcon({ item, active }: { item: (typeof ITEMS)[number]["href"]; activ
           />
         </svg>
       );
+    default:
+      return null;
   }
 }

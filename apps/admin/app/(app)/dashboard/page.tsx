@@ -2,6 +2,7 @@
 
 import { DashboardVisitorsTable } from "@/components/DashboardVisitorsTable";
 import { LeaderboardChart } from "@/components/LeaderboardChart";
+import { useTranslation } from "@/lib/client/language-context";
 import { useEffect, useState } from "react";
 
 interface DashboardSummary {
@@ -29,6 +30,7 @@ function SummaryCard({ label, value }: { label: string; value: number }) {
 }
 
 export default function DashboardPage() {
+  const { t } = useTranslation();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -57,24 +59,24 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="text-xl font-semibold text-text-primary">Dashboard</h1>
-        <p className="text-sm text-text-secondary">Event-wide summary and exhibitor activity.</p>
+        <h1 className="text-xl font-semibold text-text-primary">{t("dashboard.title")}</h1>
+        <p className="text-sm text-text-secondary">{t("dashboard.subtitle")}</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
-        <SummaryCard label="Total visitors" value={summary?.totalVisitors ?? 0} />
-        <SummaryCard label="Invited" value={summary?.invitedCount ?? 0} />
-        <SummaryCard label="Guests" value={summary?.guestCount ?? 0} />
-        <SummaryCard label="Exhibitors" value={summary?.totalExhibitors ?? 0} />
-        <SummaryCard label="Total visits" value={summary?.totalVisits ?? 0} />
+        <SummaryCard label={t("dashboard.totalVisitors")} value={summary?.totalVisitors ?? 0} />
+        <SummaryCard label={t("dashboard.invited")} value={summary?.invitedCount ?? 0} />
+        <SummaryCard label={t("dashboard.guests")} value={summary?.guestCount ?? 0} />
+        <SummaryCard label={t("dashboard.exhibitors")} value={summary?.totalExhibitors ?? 0} />
+        <SummaryCard label={t("dashboard.totalVisits")} value={summary?.totalVisits ?? 0} />
       </div>
 
       <div className="rounded-2xl border border-border-subtle bg-surface-1 p-5">
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-text-secondary">
-          Exhibitor leaderboard
+          {t("dashboard.leaderboard")}
         </h2>
         {isLoading ? (
-          <p className="py-8 text-center text-sm text-text-secondary">Loading…</p>
+          <p className="py-8 text-center text-sm text-text-secondary">{t("common.loading")}</p>
         ) : (
           <LeaderboardChart data={topLeaderboard} />
         )}
@@ -82,7 +84,7 @@ export default function DashboardPage() {
 
       <div>
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-text-secondary">
-          Visitors
+          {t("dashboard.visitors")}
         </h2>
         <DashboardVisitorsTable />
       </div>

@@ -2,6 +2,7 @@
 
 import { SyncStatusChip } from "@/components/SyncStatusChip";
 import { VisitorTypeBadge } from "@/components/VisitorTypeBadge";
+import { useTranslation } from "@/lib/client/language-context";
 import { getOutboxEntryByQrToken } from "@/lib/offline/idb";
 import { refreshVisitor, resolveVisitor } from "@/lib/offline/visitor-lookup";
 import type { CachedVisitor } from "@/lib/offline/types";
@@ -21,6 +22,7 @@ export default function VisitorDescriptionPage() {
   const qrToken = decodeURIComponent(params.qrToken);
   const [state, setState] = useState<State>({ status: "loading" });
   const [scannedAt, setScannedAt] = useState<string | null>(searchParams.get("scannedAt"));
+  const { t } = useTranslation();
 
   useEffect(() => {
     let cancelled = false;
@@ -60,7 +62,7 @@ export default function VisitorDescriptionPage() {
         onClick={() => router.back()}
         className="self-start text-sm text-text-secondary"
       >
-        ← Back
+        {t("visitor.back")}
       </button>
 
       {state.status === "loading" ? (
@@ -72,18 +74,18 @@ export default function VisitorDescriptionPage() {
 
       {state.status === "not-found" ? (
         <div className="rounded-2xl border border-border-subtle bg-surface-1 p-6 text-center">
-          <p className="text-text-primary">This badge code wasn&apos;t recognized.</p>
+          <p className="text-text-primary">{t("visitor.notFound")}</p>
           <p className="mt-1 text-sm text-text-secondary">
-            Double-check the code, or try scanning again.
+            {t("visitor.notFoundHint")}
           </p>
         </div>
       ) : null}
 
       {state.status === "pending-offline" ? (
         <div className="rounded-2xl border border-border-subtle bg-surface-1 p-6 text-center">
-          <p className="text-text-primary">Scanned — details will load once you&apos;re back online.</p>
+          <p className="text-text-primary">{t("visitor.pendingOffline")}</p>
           <p className="mt-1 text-sm text-text-secondary">
-            This scan has already been saved on your device.
+            {t("visitor.savedOnDevice")}
           </p>
         </div>
       ) : null}
@@ -93,7 +95,7 @@ export default function VisitorDescriptionPage() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <h1 className="text-xl font-semibold text-text-primary">
-                {state.visitor.name ?? "Guest visitor"}
+                {state.visitor.name ?? t("visitor.guestVisitor")}
               </h1>
               {state.visitor.company ? (
                 <p className="text-sm text-text-secondary">{state.visitor.company}</p>
@@ -120,13 +122,13 @@ export default function VisitorDescriptionPage() {
               </a>
             ) : null}
             {!state.visitor.phoneNumber && !state.visitor.email ? (
-              <p className="text-sm text-text-muted">No contact info on file yet.</p>
+              <p className="text-sm text-text-muted">{t("visitor.noContact")}</p>
             ) : null}
           </div>
 
           <div className="mt-6 flex items-center justify-between border-t border-border-subtle pt-4">
             <span className="text-xs text-text-muted">
-              {scannedAt ? `Scanned ${new Date(scannedAt).toLocaleString()}` : null}
+              {scannedAt ? t("visitor.scannedAt", { date: new Date(scannedAt).toLocaleString() }) : null}
             </span>
             <SyncStatusChip />
           </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { FormField, buttonPrimaryClassName, buttonSecondaryClassName, inputClassName } from "@/components/FormField";
+import { useTranslation } from "@/lib/client/language-context";
 import { useState } from "react";
 
 export interface VisitorFormValues {
@@ -32,6 +33,7 @@ export function VisitorForm({
   submitLabel?: string;
   showVisitorType?: boolean;
 }) {
+  const { t } = useTranslation();
   const [values, setValues] = useState<VisitorFormValues>({ ...EMPTY_VALUES, ...initialValues });
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -47,7 +49,7 @@ export function VisitorForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <FormField label="Name">
+      <FormField label={t("form.name")}>
         <input
           className={inputClassName}
           value={values.name}
@@ -55,7 +57,7 @@ export function VisitorForm({
           placeholder="Jane Doe"
         />
       </FormField>
-      <FormField label="Company">
+      <FormField label={t("form.company")}>
         <input
           className={inputClassName}
           value={values.company}
@@ -64,7 +66,7 @@ export function VisitorForm({
         />
       </FormField>
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="Phone number">
+        <FormField label={t("form.phone")}>
           <input
             className={inputClassName}
             value={values.phoneNumber}
@@ -72,7 +74,7 @@ export function VisitorForm({
             placeholder="+1 555 000 0000"
           />
         </FormField>
-        <FormField label="Email">
+        <FormField label={t("form.email")}>
           <input
             type="email"
             className={inputClassName}
@@ -83,7 +85,7 @@ export function VisitorForm({
         </FormField>
       </div>
       {showVisitorType ? (
-        <FormField label="Visitor type">
+        <FormField label={t("form.visitorType")}>
           <select
             className={inputClassName}
             value={values.visitorType}
@@ -91,8 +93,8 @@ export function VisitorForm({
               setValues((v) => ({ ...v, visitorType: e.target.value as "invited" | "guest" }))
             }
           >
-            <option value="invited">Invited</option>
-            <option value="guest">Guest</option>
+            <option value="invited">{t("common.invited")}</option>
+            <option value="guest">{t("common.guest")}</option>
           </select>
         </FormField>
       ) : null}
@@ -101,7 +103,7 @@ export function VisitorForm({
 
       <div className="mt-2 flex justify-end gap-2">
         <button type="button" onClick={onCancel} className={buttonSecondaryClassName}>
-          Cancel
+          {t("form.cancel")}
         </button>
         <button
           type="submit"
@@ -109,7 +111,7 @@ export function VisitorForm({
           className={buttonPrimaryClassName}
           style={{ background: "var(--brand-gradient)" }}
         >
-          {isSubmitting ? "Saving…" : submitLabel}
+          {isSubmitting ? t("form.saving") : submitLabel}
         </button>
       </div>
     </form>

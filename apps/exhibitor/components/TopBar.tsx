@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { AccountBadge } from "./AccountBadge";
+import { LanguageToggle } from "./LanguageToggle";
 import { UTMark } from "./UTMark";
 
 export function TopBar({
@@ -28,7 +29,10 @@ export function TopBar({
             <span className="text-sm font-semibold text-text-primary">{businessName}</span>
           ) : null}
         </Link>
-        <AccountBadge />
+        <div className="flex items-center gap-2">
+          <LanguageToggle />
+          <AccountBadge />
+        </div>
       </div>
     </header>
   );

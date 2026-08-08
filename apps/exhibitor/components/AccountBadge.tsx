@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useAuth } from "@/lib/client/auth-context";
+import { useTranslation } from "@/lib/client/language-context";
 
 export function AccountBadge() {
   const { exhibitor, isLoading } = useAuth();
+  const { t } = useTranslation();
 
   if (isLoading) {
     return <div className="h-9 w-9 animate-pulse rounded-full bg-surface-2" aria-hidden />;
@@ -16,7 +18,7 @@ export function AccountBadge() {
         href="/login"
         className="flex items-center rounded-full bg-surface-2 px-3 py-2 text-sm font-medium text-text-primary hover:bg-surface-3"
       >
-        Sign in
+        {t("account.signIn")}
       </Link>
     );
   }

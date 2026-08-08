@@ -3,38 +3,40 @@
 import { VisitorTypeBadge } from "@/components/VisitorTypeBadge";
 import { useToast } from "@/lib/client/toast";
 import { type ScannedListItem, useScannedList } from "@/lib/client/use-scanned-list";
+import { useTranslation } from "@/lib/client/language-context";
 import Link from "next/link";
 
 export default function ScannedListPage() {
   const { items, search, setSearch, isLoading, remove } = useScannedList();
   const { showToast } = useToast();
+  const { t } = useTranslation();
 
   async function handleDelete(item: ScannedListItem) {
     const undo = await remove(item);
     showToast({
-      message: `Removed ${item.name ?? "visitor"} from your list`,
-      actionLabel: "Undo",
+      message: t("scanned.removed", { name: item.name ?? "visitor" }),
+      actionLabel: t("common.undo"),
       onAction: () => void undo(),
     });
   }
 
   return (
     <div className="flex flex-col gap-4 px-6 py-6">
-      <h1 className="text-xl font-semibold text-text-primary">Scanned visitors</h1>
+      <h1 className="text-xl font-semibold text-text-primary">{t("scanned.title")}</h1>
 
       <input
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search by name or company"
+        placeholder={t("scanned.search")}
         aria-label="Search scanned visitors"
         className="w-full rounded-xl border border-border-subtle bg-surface-1 px-4 py-2.5 text-text-primary placeholder:text-text-muted"
       />
 
       {isLoading ? (
-        <p className="py-8 text-center text-sm text-text-secondary">Loading…</p>
+        <p className="py-8 text-center text-sm text-text-secondary">{t("common.loading")}</p>
       ) : items.length === 0 ? (
         <p className="py-8 text-center text-sm text-text-secondary">
-          No visitors scanned yet. Tap Scan to get started.
+          {t("scanned.empty")}
         </p>
       ) : (
         <ul className="flex flex-col gap-2">
@@ -46,7 +48,7 @@ export default function ScannedListPage() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <p className="truncate font-medium text-text-primary">
-                    {item.name ?? "Pending details…"}
+                    {item.name ?? t("scanned.pending")}
                   </p>
                   {item.visitorType ? <VisitorTypeBadge visitorType={item.visitorType} /> : null}
                 </div>
@@ -57,7 +59,7 @@ export default function ScannedListPage() {
                 </p>
                 {item.syncState !== "synced" ? (
                   <p className="text-xs text-text-muted">
-                    {item.syncState === "sync-error" ? "Sync error" : "Saved — will sync"}
+                    {item.syncState === "sync-error" ? t("scanned.syncError") : t("scanned.willSync")}
                   </p>
                 ) : null}
               </div>

@@ -1,14 +1,7 @@
 "use client";
 
 import { useSyncStatus } from "@/lib/client/use-sync-status";
-
-const LABELS: Record<string, string> = {
-  idle: "synced",
-  syncing: "saved — syncing…",
-  offline: "saved offline",
-  "signed-out": "saved offline",
-  error: "sync issue",
-};
+import { useTranslation } from "@/lib/client/language-context";
 
 const DOT_CLASSES: Record<string, string> = {
   idle: "bg-success",
@@ -20,8 +13,18 @@ const DOT_CLASSES: Record<string, string> = {
 
 export function SyncStatusChip({ className }: { className?: string }) {
   const { status, pendingCount } = useSyncStatus();
+  const { t } = useTranslation();
+
+  const labelMap: Record<string, string> = {
+    idle: t("sync.synced"),
+    syncing: t("sync.syncing"),
+    offline: t("sync.offline"),
+    "signed-out": t("sync.signedOut"),
+    error: t("sync.error"),
+  };
+
   const label =
-    status === "idle" && pendingCount === 0 ? "synced" : (LABELS[status] ?? "saved offline");
+    status === "idle" && pendingCount === 0 ? t("sync.synced") : (labelMap[status] ?? t("sync.offline"));
 
   return (
     <span

@@ -2,6 +2,7 @@
 
 import { ScanFrameOverlay } from "@/components/ScanFrameOverlay";
 import { recordScan } from "@/lib/offline/scan";
+import { useTranslation } from "@/lib/client/language-context";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type QrScannerType from "qr-scanner";
@@ -10,6 +11,7 @@ type CameraState = "starting" | "active" | "denied" | "unavailable";
 
 export default function ScanPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const videoRef = useRef<HTMLVideoElement>(null);
   const scannerRef = useRef<QrScannerType | null>(null);
   const [cameraState, setCameraState] = useState<CameraState>("starting");
@@ -107,7 +109,7 @@ export default function ScanPage() {
 
         {cameraState === "starting" ? (
           <div className="absolute inset-0 flex items-center justify-center text-text-secondary">
-            Starting camera…
+            {t("scan.starting")}
           </div>
         ) : null}
 
@@ -115,8 +117,8 @@ export default function ScanPage() {
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-surface-0 px-8 text-center">
             <p className="text-text-primary">
               {cameraState === "denied"
-                ? "Camera access was denied. Allow camera access, or enter a badge code manually below."
-                : "No camera available. Enter a badge code manually below."}
+                ? t("scan.denied")
+                : t("scan.unavailable")}
             </p>
           </div>
         ) : null}
@@ -128,7 +130,7 @@ export default function ScanPage() {
           onClick={() => router.push("/")}
           className="rounded-full border border-border-subtle px-4 py-2.5 text-sm font-medium text-text-primary"
         >
-          Cancel
+          {t("scan.cancel")}
         </button>
         {hasFlash ? (
           <button
@@ -141,7 +143,7 @@ export default function ScanPage() {
                 : "border-border-subtle text-text-primary"
             }`}
           >
-            Torch
+            {t("scan.torch")}
           </button>
         ) : null}
       </div>
@@ -153,7 +155,7 @@ export default function ScanPage() {
         <input
           value={manualToken}
           onChange={(e) => setManualToken(e.target.value)}
-          placeholder="Damaged badge? Enter the printed code"
+          placeholder={t("scan.manualPlaceholder")}
           className="flex-1 rounded-xl border border-border-subtle bg-surface-1 px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted"
         />
         <button
@@ -162,7 +164,7 @@ export default function ScanPage() {
           className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
           style={{ background: "var(--brand-gradient)" }}
         >
-          Go
+          {t("scan.go")}
         </button>
       </form>
     </div>

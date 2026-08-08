@@ -1,6 +1,7 @@
 "use client";
 
 import { buttonPrimaryClassName, inputClassName } from "@/components/FormField";
+import { useTranslation } from "@/lib/client/language-context";
 import type { Visitor } from "@repo/db";
 import { useEffect, useState } from "react";
 
@@ -29,6 +30,7 @@ async function downloadBadgePdf(visitorType: VisitorType, visitorIds?: string[])
 }
 
 export default function BadgesPage() {
+  const { t, dir } = useTranslation();
   const [visitorType, setVisitorType] = useState<VisitorType>("invited");
   const [mode, setMode] = useState<Mode>("all");
   const [search, setSearch] = useState("");
@@ -75,7 +77,7 @@ export default function BadgesPage() {
     try {
       const visitorIds = mode === "select" ? Array.from(selected) : undefined;
       if (mode === "select" && (!visitorIds || visitorIds.length === 0)) {
-        setError("Select at least one visitor first.");
+        setError(t("badges.selectFirst"));
         return;
       }
       await downloadBadgePdf(visitorType, visitorIds);
@@ -89,10 +91,9 @@ export default function BadgesPage() {
   return (
     <div className="flex max-w-3xl flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold text-text-primary">Badges</h1>
+        <h1 className="text-xl font-semibold text-text-primary">{t("badges.title")}</h1>
         <p className="text-sm text-text-secondary">
-          Print-ready badge PDFs. Invited badges show name + company + QR; guest badges show QR
-          only, since no name is known yet.
+          {t("badges.subtitle")}
         </p>
       </div>
 
@@ -107,7 +108,7 @@ export default function BadgesPage() {
                 visitorType === type ? "bg-surface-3 text-text-primary" : "text-text-secondary"
               }`}
             >
-              {type}
+              {type === "invited" ? t("common.invited") : t("common.guest")}
             </button>
           ))}
         </div>
@@ -120,7 +121,7 @@ export default function BadgesPage() {
               mode === "all" ? "bg-surface-3 text-text-primary" : "text-text-secondary"
             }`}
           >
-            All active
+            {t("badges.allActive")}
           </button>
           <button
             type="button"
@@ -129,7 +130,7 @@ export default function BadgesPage() {
               mode === "select" ? "bg-surface-3 text-text-primary" : "text-text-secondary"
             }`}
           >
-            Choose specific
+            {t("badges.chooseSpecific")}
           </button>
         </div>
       </div>
@@ -139,12 +140,12 @@ export default function BadgesPage() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search visitors…"
+            placeholder={t("badges.searchVisitors")}
             className={`${inputClassName} max-w-sm`}
           />
           <div className="max-h-80 overflow-auto rounded-2xl border border-border-subtle bg-surface-1">
             {candidates.length === 0 ? (
-              <p className="p-4 text-sm text-text-secondary">No matching visitors.</p>
+              <p className="p-4 text-sm text-text-secondary">{t("badges.noMatching")}</p>
             ) : (
               <ul>
                 {candidates.map((visitor) => (
@@ -159,7 +160,7 @@ export default function BadgesPage() {
                       className="h-4 w-4 rounded border-border-subtle"
                     />
                     <span className="text-sm text-text-primary">
-                      {visitor.name ?? "Unfilled guest"}
+                      {visitor.name ?? t("badges.unfilledGuest")}
                     </span>
                     <span className="text-xs text-text-muted">{visitor.company}</span>
                   </li>
@@ -167,7 +168,7 @@ export default function BadgesPage() {
               </ul>
             )}
           </div>
-          <p className="text-xs text-text-muted">{selected.size} selected</p>
+          <p className="text-xs text-text-muted">{t("badges.selected", { count: selected.size.toString() })}</p>
         </div>
       ) : null}
 
@@ -180,7 +181,7 @@ export default function BadgesPage() {
         className={`w-fit ${buttonPrimaryClassName}`}
         style={{ background: "var(--brand-gradient)" }}
       >
-        {isGenerating ? "Generating…" : "Download badge PDF"}
+        {isGenerating ? t("badges.generating") : t("badges.download")}
       </button>
     </div>
   );

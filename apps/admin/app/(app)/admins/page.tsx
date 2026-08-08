@@ -8,6 +8,7 @@ import {
 } from "@/components/FormField";
 import { Modal } from "@/components/Modal";
 import { useAuth } from "@/lib/client/auth-context";
+import { useTranslation } from "@/lib/client/language-context";
 import { useCallback, useEffect, useState } from "react";
 
 interface AdminRow {
@@ -24,6 +25,7 @@ function AddAdminForm({
   onCancel: () => void;
   onCreated: () => Promise<void>;
 }) {
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -53,7 +55,7 @@ function AddAdminForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <FormField label="Name">
+      <FormField label={t("admins.name")}>
         <input
           className={inputClassName}
           value={name}
@@ -61,7 +63,7 @@ function AddAdminForm({
           required
         />
       </FormField>
-      <FormField label="Email">
+      <FormField label={t("admins.email")}>
         <input
           type="email"
           className={inputClassName}
@@ -70,7 +72,7 @@ function AddAdminForm({
           required
         />
       </FormField>
-      <FormField label="Password" hint="At least 8 characters.">
+      <FormField label={t("admins.password")} hint="At least 8 characters.">
         <input
           type="password"
           className={inputClassName}
@@ -83,7 +85,7 @@ function AddAdminForm({
       {error ? <p className="text-sm text-danger">{error}</p> : null}
       <div className="mt-2 flex justify-end gap-2">
         <button type="button" onClick={onCancel} className={buttonSecondaryClassName}>
-          Cancel
+          {t("form.cancel")}
         </button>
         <button
           type="submit"
@@ -91,7 +93,7 @@ function AddAdminForm({
           className={buttonPrimaryClassName}
           style={{ background: "var(--brand-gradient)" }}
         >
-          {isSubmitting ? "Creating…" : "Create admin"}
+          {isSubmitting ? t("admins.saving") : t("admins.addAdmin")}
         </button>
       </div>
     </form>
@@ -99,6 +101,7 @@ function AddAdminForm({
 }
 
 export default function AdminsPage() {
+  const { t, dir } = useTranslation();
   const { admin: currentAdmin } = useAuth();
   const [admins, setAdmins] = useState<AdminRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -139,9 +142,9 @@ export default function AdminsPage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-text-primary">Admin accounts</h1>
+          <h1 className="text-xl font-semibold text-text-primary">{t("admins.title")}</h1>
           <p className="text-sm text-text-secondary">
-            Every admin has their own account -- there is no shared login.
+            {t("admins.subtitle")}
           </p>
         </div>
         <button
@@ -150,25 +153,25 @@ export default function AdminsPage() {
           className={buttonPrimaryClassName}
           style={{ background: "var(--brand-gradient)" }}
         >
-          Add admin
+          {t("admins.addAdmin")}
         </button>
       </div>
 
       <div className="overflow-x-auto rounded-2xl border border-border-subtle bg-surface-1">
-        <table className="w-full min-w-[560px] text-left text-sm">
+        <table className={`w-full min-w-[560px] text-sm text-${dir === "rtl" ? "end" : "start"}`}>
           <thead className="border-b border-border-subtle text-text-secondary">
             <tr>
-              <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Email</th>
-              <th className="px-4 py-3">Joined</th>
-              <th className="px-4 py-3 text-right">Actions</th>
+              <th className="px-4 py-3">{t("admins.name")}</th>
+              <th className="px-4 py-3">{t("admins.email")}</th>
+              <th className="px-4 py-3">{t("admins.created")}</th>
+              <th className={`px-4 py-3 text-${dir === "rtl" ? "start" : "end"}`}>{t("admins.actions")}</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <tr>
                 <td colSpan={4} className="px-4 py-8 text-center text-text-secondary">
-                  Loading…
+                  {t("common.loading")}
                 </td>
               </tr>
             ) : (
@@ -192,7 +195,7 @@ export default function AdminsPage() {
                         onClick={() => setPendingDelete(admin)}
                         className="rounded-lg border border-danger/40 px-3 py-1.5 text-xs font-medium text-danger hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-40"
                       >
-                        Delete
+                        {t("admins.delete")}
                       </button>
                     </div>
                   </td>
@@ -204,7 +207,7 @@ export default function AdminsPage() {
       </div>
 
       {showCreate ? (
-        <Modal title="Add admin" onClose={() => setShowCreate(false)}>
+        <Modal title={t("admins.addTitle")} onClose={() => setShowCreate(false)}>
           <AddAdminForm
             onCancel={() => setShowCreate(false)}
             onCreated={async () => {
@@ -216,7 +219,7 @@ export default function AdminsPage() {
       ) : null}
 
       {pendingDelete ? (
-        <Modal title="Delete admin account" onClose={() => setPendingDelete(null)}>
+        <Modal title={t("admins.delete")} onClose={() => setPendingDelete(null)}>
           <p className="text-sm text-text-secondary">
             This permanently deletes <span className="text-text-primary">{pendingDelete.name}</span>
             's admin account. This cannot be undone.
@@ -228,14 +231,14 @@ export default function AdminsPage() {
               onClick={() => setPendingDelete(null)}
               className={buttonSecondaryClassName}
             >
-              Cancel
+              {t("form.cancel")}
             </button>
             <button
               type="button"
               onClick={() => void handleDelete()}
               className="rounded-lg bg-danger px-4 py-2 text-sm font-semibold text-white"
             >
-              Delete permanently
+              {t("admins.delete")}
             </button>
           </div>
         </Modal>

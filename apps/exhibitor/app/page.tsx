@@ -2,12 +2,14 @@
 
 import { ScanButton } from "@/components/ScanButton";
 import { useAuth } from "@/lib/client/auth-context";
+import { useTranslation } from "@/lib/client/language-context";
 import { useEffect, useState } from "react";
 import { getUnsyncedOutboxEntries } from "@/lib/offline/idb";
 import Link from "next/link";
 
 export default function HomePage() {
   const { exhibitor } = useAuth();
+  const { t } = useTranslation();
   const [scannedCount, setScannedCount] = useState<number | null>(null);
 
   useEffect(() => {
@@ -37,10 +39,10 @@ export default function HomePage() {
     <div className="flex min-h-[calc(100dvh-4rem-5rem)] flex-col items-center justify-center gap-8 px-6 text-center">
       <div>
         <h1 className="text-2xl font-semibold text-text-primary">
-          {exhibitor ? `Welcome, ${exhibitor.name.split(" ")[0]}` : "Scan a badge to get started"}
+          {exhibitor ? t("home.welcomeUser", { name: exhibitor.name.split(" ")[0] ?? exhibitor.name }) : t("home.scanToStart")}
         </h1>
         <p className="mt-1 text-sm text-text-secondary">
-          Point your camera at a visitor&apos;s QR badge.
+          {t("home.pointCamera")}
         </p>
       </div>
 
@@ -50,7 +52,7 @@ export default function HomePage() {
         href="/scanned"
         className="flex items-center gap-2 rounded-full border border-border-subtle bg-surface-1 px-4 py-2.5 text-sm font-medium text-text-primary hover:bg-surface-2"
       >
-        Scanned visitors
+        {t("home.scannedVisitors")}
         {scannedCount !== null && scannedCount > 0 ? (
           <span
             className="flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-semibold text-white"

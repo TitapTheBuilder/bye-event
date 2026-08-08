@@ -2,10 +2,12 @@
 
 import { StatusPill } from "@/components/StatusPill";
 import { useToast } from "@/lib/client/toast";
+import { useTranslation } from "@/lib/client/language-context";
 import type { Exhibitor } from "@repo/db";
 import { useCallback, useEffect, useState } from "react";
 
 export default function ExhibitorsPage() {
+  const { t, dir } = useTranslation();
   const [exhibitors, setExhibitors] = useState<Exhibitor[]>([]);
   const [includeDeactivated, setIncludeDeactivated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -39,8 +41,8 @@ export default function ExhibitorsPage() {
 
     if (wasActive) {
       showToast({
-        message: `Deactivated ${exhibitor.name}`,
-        actionLabel: "Undo",
+        message: t("exhibitors.deactivated", { name: exhibitor.name }),
+        actionLabel: t("common.undo"),
         onAction: async () => {
           await fetch(`/api/exhibitors/${exhibitor.id}`, {
             method: "PATCH",
@@ -56,10 +58,9 @@ export default function ExhibitorsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold text-text-primary">Exhibitors</h1>
+        <h1 className="text-xl font-semibold text-text-primary">{t("exhibitors.title")}</h1>
         <p className="text-sm text-text-secondary">
-          Booth staff accounts. Exhibitors self-register from the scanner app; deactivate an
-          account here if someone should lose access.
+          {t("exhibitors.subtitle")}
         </p>
       </div>
 
@@ -70,32 +71,32 @@ export default function ExhibitorsPage() {
           onChange={(e) => setIncludeDeactivated(e.target.checked)}
           className="h-4 w-4 rounded border-border-subtle"
         />
-        Show deactivated
+        {t("exhibitors.showDeactivated")}
       </label>
 
       <div className="overflow-x-auto rounded-2xl border border-border-subtle bg-surface-1">
-        <table className="w-full min-w-[640px] text-left text-sm">
+        <table className={`w-full min-w-[640px] text-sm text-${dir === "rtl" ? "end" : "start"}`}>
           <thead className="border-b border-border-subtle text-text-secondary">
             <tr>
-              <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Username</th>
-              <th className="px-4 py-3">Phone</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Joined</th>
-              <th className="px-4 py-3 text-right">Actions</th>
+              <th className="px-4 py-3">{t("exhibitors.name")}</th>
+              <th className="px-4 py-3">{t("exhibitors.username")}</th>
+              <th className="px-4 py-3">{t("exhibitors.phone")}</th>
+              <th className="px-4 py-3">{t("exhibitors.status")}</th>
+              <th className="px-4 py-3">{t("exhibitors.joined")}</th>
+              <th className={`px-4 py-3 text-${dir === "rtl" ? "start" : "end"}`}>{t("exhibitors.actions")}</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <tr>
                 <td colSpan={6} className="px-4 py-8 text-center text-text-secondary">
-                  Loading…
+                  {t("common.loading")}
                 </td>
               </tr>
             ) : exhibitors.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-8 text-center text-text-secondary">
-                  No exhibitors have signed up yet.
+                  {t("exhibitors.noExhibitors")}
                 </td>
               </tr>
             ) : (
@@ -121,7 +122,7 @@ export default function ExhibitorsPage() {
                             : "border-danger/40 text-danger hover:bg-danger/10"
                         }`}
                       >
-                        {exhibitor.deactivatedAt ? "Reactivate" : "Deactivate"}
+                        {exhibitor.deactivatedAt ? t("visitors.reactivate") : t("visitors.deactivate")}
                       </button>
                     </div>
                   </td>

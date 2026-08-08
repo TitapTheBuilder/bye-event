@@ -3,15 +3,17 @@
 import { SyncStatusChip } from "@/components/SyncStatusChip";
 import { useAuth } from "@/lib/client/auth-context";
 import { useSyncStatus } from "@/lib/client/use-sync-status";
+import { useTranslation } from "@/lib/client/language-context";
 import { useRouter } from "next/navigation";
 
 export default function ProfilePage() {
   const { exhibitor, isLoading, logout } = useAuth();
   const { pendingCount } = useSyncStatus();
+  const { t } = useTranslation();
   const router = useRouter();
 
   if (isLoading) {
-    return <p className="px-6 py-8 text-sm text-text-secondary">Loading…</p>;
+    return <p className="px-6 py-8 text-sm text-text-secondary">{t("common.loading")}</p>;
   }
 
   if (!exhibitor) {
@@ -42,18 +44,18 @@ export default function ProfilePage() {
       <div className="rounded-2xl border border-border-subtle bg-surface-1 p-4">
         <dl className="grid grid-cols-1 gap-3 text-sm">
           <div className="flex justify-between">
-            <dt className="text-text-secondary">Phone</dt>
+            <dt className="text-text-secondary">{t("profile.phone")}</dt>
             <dd className="text-text-primary">{exhibitor.phoneNumber}</dd>
           </div>
           <div className="flex justify-between">
-            <dt className="text-text-secondary">Sync status</dt>
+            <dt className="text-text-secondary">{t("profile.syncStatus")}</dt>
             <dd>
               <SyncStatusChip />
             </dd>
           </div>
           <div className="flex justify-between">
-            <dt className="text-text-secondary">Pending scans</dt>
-            <dd className="text-text-primary">{pendingCount} pending</dd>
+            <dt className="text-text-secondary">{t("profile.pendingScans")}</dt>
+            <dd className="text-text-primary">{t("profile.pending", { count: pendingCount })}</dd>
           </div>
         </dl>
       </div>
@@ -63,7 +65,7 @@ export default function ProfilePage() {
         onClick={() => void logout().then(() => router.push("/"))}
         className="rounded-xl border border-border-subtle py-3 font-medium text-danger"
       >
-        Log out
+        {t("profile.logout")}
       </button>
     </div>
   );

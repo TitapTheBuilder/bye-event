@@ -7,6 +7,7 @@ import { StatusPill } from "@/components/StatusPill";
 import { VisitorForm, type VisitorFormValues } from "@/components/VisitorForm";
 import { useToast } from "@/lib/client/toast";
 import { useVisitors } from "@/lib/client/use-visitors";
+import { useTranslation } from "@/lib/client/language-context";
 import type { Visitor } from "@repo/db";
 import { useState } from "react";
 
@@ -26,6 +27,7 @@ function toFormValues(visitor: Visitor): Partial<VisitorFormValues> {
  * invited visitors.
  */
 export default function GuestsPage() {
+  const { t, dir } = useTranslation();
   const { visitors, total, isLoading, refresh, query, setPage } = useVisitors({
     visitorType: "guest",
     pageSize: 20,
@@ -83,8 +85,8 @@ export default function GuestsPage() {
     });
     await refresh();
     showToast({
-      message: "Guest badge deactivated",
-      actionLabel: "Undo",
+      message: t("guests.badgeDeactivated"),
+      actionLabel: t("common.undo"),
       onAction: async () => {
         await fetch(`/api/visitors/${visitor.id}`, {
           method: "PATCH",
@@ -99,10 +101,9 @@ export default function GuestsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold text-text-primary">Guests</h1>
+        <h1 className="text-xl font-semibold text-text-primary">{t("guests.title")}</h1>
         <p className="text-sm text-text-secondary">
-          Generate walk-in guest badges in bulk. Names and contact details get filled in later, as
-          guests check in.
+          {t("guests.subtitle")}
         </p>
       </div>
 
@@ -111,7 +112,7 @@ export default function GuestsPage() {
         className="flex flex-wrap items-end gap-3 rounded-2xl border border-border-subtle bg-surface-1 p-4"
       >
         <label className="flex flex-col gap-1.5 text-sm text-text-secondary">
-          Number of guest badges
+          {t("guests.countLabel")}
           <input
             type="number"
             min={1}
@@ -127,43 +128,43 @@ export default function GuestsPage() {
           className={buttonPrimaryClassName}
           style={{ background: "var(--brand-gradient)" }}
         >
-          {isGenerating ? "Generating…" : "Generate guest badges"}
+          {isGenerating ? t("guests.generating") : t("guests.generate")}
         </button>
         {generateError ? <p className="text-sm text-danger">{generateError}</p> : null}
         {lastGenerated !== null ? (
-          <p className="text-sm text-success">Generated {lastGenerated} guest badges.</p>
+          <p className="text-sm text-success">{t("guests.generated", { count: lastGenerated.toString() })}</p>
         ) : null}
       </form>
 
       <div className="overflow-x-auto rounded-2xl border border-border-subtle bg-surface-1">
-        <table className="w-full min-w-[640px] text-left text-sm">
+        <table className={`w-full min-w-[640px] text-sm text-${dir === "rtl" ? "end" : "start"}`}>
           <thead className="border-b border-border-subtle text-text-secondary">
             <tr>
-              <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Company</th>
-              <th className="px-4 py-3">Contact</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Created</th>
-              <th className="px-4 py-3 text-right">Actions</th>
+              <th className="px-4 py-3">{t("visitors.name")}</th>
+              <th className="px-4 py-3">{t("visitors.company")}</th>
+              <th className="px-4 py-3">{t("visitors.contact")}</th>
+              <th className="px-4 py-3">{t("visitors.status")}</th>
+              <th className="px-4 py-3">{t("visitors.created")}</th>
+              <th className={`px-4 py-3 text-${dir === "rtl" ? "start" : "end"}`}>{t("visitors.actions")}</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <tr>
                 <td colSpan={6} className="px-4 py-8 text-center text-text-secondary">
-                  Loading…
+                  {t("common.loading")}
                 </td>
               </tr>
             ) : visitors.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-8 text-center text-text-secondary">
-                  No guest badges yet. Generate some above.
+                  {t("guests.noGuests")}
                 </td>
               </tr>
             ) : (
               visitors.map((visitor) => (
                 <tr key={visitor.id} className="border-b border-border-subtle last:border-0">
-                  <td className="px-4 py-3 text-text-primary">{visitor.name ?? "Unfilled"}</td>
+                  <td className="px-4 py-3 text-text-primary">{visitor.name ?? t("guests.unfilled")}</td>
                   <td className="px-4 py-3 text-text-secondary">{visitor.company ?? "—"}</td>
                   <td className="px-4 py-3 text-text-secondary">
                     <div>{visitor.phoneNumber ?? "—"}</div>
@@ -182,7 +183,7 @@ export default function GuestsPage() {
                         onClick={() => setEditing(visitor)}
                         className="rounded-lg border border-border-subtle px-3 py-1.5 text-xs font-medium text-text-primary hover:bg-surface-2"
                       >
-                        Fill in details
+                        {t("guests.fillDetails")}
                       </button>
                       {!visitor.deactivatedAt ? (
                         <button
@@ -190,7 +191,7 @@ export default function GuestsPage() {
                           onClick={() => void handleDeactivate(visitor)}
                           className="rounded-lg border border-danger/40 px-3 py-1.5 text-xs font-medium text-danger hover:bg-danger/10"
                         >
-                          Deactivate
+                          {t("visitors.deactivate")}
                         </button>
                       ) : null}
                     </div>
@@ -205,10 +206,10 @@ export default function GuestsPage() {
       <Pagination page={query.page} pageSize={query.pageSize} total={total} onPageChange={setPage} />
 
       {editing ? (
-        <Modal title="Guest details" onClose={() => setEditing(null)}>
+        <Modal title={t("guests.guestDetails")} onClose={() => setEditing(null)}>
           <VisitorForm
             initialValues={toFormValues(editing)}
-            submitLabel="Save details"
+            submitLabel={t("guests.saveDetails")}
             onCancel={() => setEditing(null)}
             onSubmit={(values) => handleEditSubmit(editing.id, values)}
           />

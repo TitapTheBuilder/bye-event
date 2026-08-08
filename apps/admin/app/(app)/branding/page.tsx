@@ -1,6 +1,7 @@
 "use client";
 
 import { FormField, buttonPrimaryClassName, inputClassName } from "@/components/FormField";
+import { useTranslation } from "@/lib/client/language-context";
 import type { EventSettings } from "@repo/db";
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
@@ -14,6 +15,7 @@ const HEX_PATTERN = /^#[0-9a-fA-F]{6}$/;
  * change here takes effect without a redeploy.
  */
 export default function BrandingPage() {
+  const { t } = useTranslation();
   const [settings, setSettings] = useState<EventSettings | null>(null);
   const [businessName, setBusinessName] = useState("");
   const [primaryColor, setPrimaryColor] = useState("#6366f1");
@@ -61,8 +63,8 @@ export default function BrandingPage() {
       applySettings(data.settings);
       setMessage(
         data.colorsExtracted
-          ? "Logo uploaded and brand colors extracted automatically."
-          : "Logo uploaded. Colors couldn't be auto-extracted from this file -- set them manually below.",
+          ? t("branding.logoUploaded")
+          : t("branding.logoUploadedNoColors"),
       );
     } finally {
       setIsUploading(false);
@@ -87,7 +89,7 @@ export default function BrandingPage() {
         return;
       }
       applySettings(data.settings);
-      setMessage("Branding saved.");
+      setMessage(t("branding.saved"));
     } finally {
       setIsSaving(false);
     }
@@ -96,10 +98,9 @@ export default function BrandingPage() {
   return (
     <div className="flex max-w-2xl flex-col gap-8">
       <div>
-        <h1 className="text-xl font-semibold text-text-primary">Branding</h1>
+        <h1 className="text-xl font-semibold text-text-primary">{t("branding.title")}</h1>
         <p className="text-sm text-text-secondary">
-          The business customer's logo and brand colors, used across both the exhibitor scanner
-          app and this panel. The University of Tehran mark stays fixed regardless.
+          {t("branding.subtitle")}
         </p>
       </div>
 
@@ -115,12 +116,12 @@ export default function BrandingPage() {
               unoptimized
             />
           ) : (
-            <span className="text-xs text-text-muted">No logo yet</span>
+            <span className="text-xs text-text-muted">{t("branding.noLogo")}</span>
           )}
         </div>
         <div>
           <label className="inline-block cursor-pointer rounded-lg border border-border-subtle px-4 py-2 text-sm font-medium text-text-primary hover:bg-surface-2">
-            {isUploading ? "Uploading…" : "Upload new logo"}
+            {isUploading ? t("branding.uploading") : t("branding.uploadLogo")}
             <input
               type="file"
               accept="image/png,image/jpeg,image/webp,image/svg+xml"
@@ -129,12 +130,12 @@ export default function BrandingPage() {
               className="hidden"
             />
           </label>
-          <p className="mt-2 text-xs text-text-muted">PNG, JPEG, WebP, or SVG. Max 5MB.</p>
+          <p className="mt-2 text-xs text-text-muted">{t("branding.logoHint")}</p>
         </div>
       </div>
 
       <form onSubmit={handleSave} className="flex flex-col gap-5 rounded-2xl border border-border-subtle bg-surface-1 p-5">
-        <FormField label="Business name">
+        <FormField label={t("branding.businessName")}>
           <input
             className={inputClassName}
             value={businessName}
@@ -144,7 +145,7 @@ export default function BrandingPage() {
         </FormField>
 
         <div className="grid grid-cols-3 gap-4">
-          <FormField label="Primary">
+          <FormField label={t("branding.primary")}>
             <div className="flex items-center gap-2">
               <input
                 type="color"
@@ -155,7 +156,7 @@ export default function BrandingPage() {
               <span className="text-xs text-text-muted">{primaryColor}</span>
             </div>
           </FormField>
-          <FormField label="Secondary">
+          <FormField label={t("branding.secondary")}>
             <div className="flex items-center gap-2">
               <input
                 type="color"
@@ -166,7 +167,7 @@ export default function BrandingPage() {
               <span className="text-xs text-text-muted">{secondaryColor}</span>
             </div>
           </FormField>
-          <FormField label="Accent">
+          <FormField label={t("branding.accent")}>
             <div className="flex items-center gap-2">
               <input
                 type="color"
@@ -195,7 +196,7 @@ export default function BrandingPage() {
           className={`w-fit ${buttonPrimaryClassName}`}
           style={{ background: "var(--brand-gradient)" }}
         >
-          {isSaving ? "Saving…" : "Save branding"}
+          {isSaving ? t("branding.saving") : t("branding.save")}
         </button>
       </form>
     </div>
