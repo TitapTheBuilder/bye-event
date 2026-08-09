@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslation } from "@/lib/client/language-context";
+import { isNavigationItemActive } from "@/lib/client/navigation";
 import type { TranslationKey } from "@/lib/i18n/translations";
 
 const ITEMS: { href: string; labelKey: TranslationKey }[] = [
@@ -23,7 +24,7 @@ export function BottomNav() {
     >
       <div className="mx-auto flex max-w-lg items-stretch justify-around">
         {ITEMS.map((item) => {
-          const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+          const isActive = isNavigationItemActive(pathname, item.href);
           return (
             <Link
               key={item.href}
@@ -48,7 +49,7 @@ function NavIcon({ item, active }: { item: string; active: boolean }) {
   switch (item) {
     case "/":
       return (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path
             d="M4 11.5 12 4l8 7.5M6 10v9h12v-9"
             stroke={stroke}
@@ -60,7 +61,7 @@ function NavIcon({ item, active }: { item: string; active: boolean }) {
       );
     case "/scan":
       return (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path
             d="M4 8V5a1 1 0 0 1 1-1h3M20 8V5a1 1 0 0 0-1-1h-3M4 16v3a1 1 0 0 0 1 1h3M20 16v3a1 1 0 0 1-1 1h-3M4 12h16"
             stroke={stroke}
@@ -71,7 +72,7 @@ function NavIcon({ item, active }: { item: string; active: boolean }) {
       );
     case "/scanned":
       return (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path
             d="M4 6h16M4 12h16M4 18h10"
             stroke={stroke}
@@ -82,7 +83,7 @@ function NavIcon({ item, active }: { item: string; active: boolean }) {
       );
     case "/profile":
       return (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <circle cx="12" cy="8" r="3.2" stroke={stroke} strokeWidth="1.8" />
           <path
             d="M5 20c1.2-3.5 4-5.2 7-5.2s5.8 1.7 7 5.2"

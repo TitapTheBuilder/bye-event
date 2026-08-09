@@ -7,7 +7,7 @@
     "dev": "next dev",
     "dev:mobile": "next dev --hostname 0.0.0.0 --experimental-https-key .certs/lan-key.pem --experimental-https-cert .certs/lan-cert.pem",
     "build": "next build",
-    "start": "next start",
+    "start": "cp -r public .next/standalone/apps/exhibitor/ 2>/dev/null || true && cp -r .next/static .next/standalone/apps/exhibitor/.next/ 2>/dev/null || true && HOSTNAME=0.0.0.0 PORT=3000 node .next/standalone/apps/exhibitor/server.js",
     "lint": "biome lint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"

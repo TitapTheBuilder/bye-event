@@ -170,9 +170,19 @@ export async function getOutboxEntryByQrToken(qrToken: string): Promise<OutboxEn
   return all.find((entry) => entry.qrToken === qrToken);
 }
 
+/**
+ * Clears all visitor details and scan events held on this device. Call this
+ * after logout so one exhibitor's local history cannot be exposed to the
+ * next account using the same phone.
+ */
+export async function clearLocalScannerData(): Promise<void> {
+  const db = await getDb();
+  const tx = db.transaction(["visitorCache", "visitOutbox"], "readwrite");
+  await Promise.all([tx.objectStore("visitorCache").clear(), tx.objectStore("visitOutbox").clear()]);
+  await tx.done;
+}
+
 /** Test-only escape hatch. */
 export async function _clearAllForTests(): Promise<void> {
-  const db = await getDb();
-  await db.clear("visitorCache");
-  await db.clear("visitOutbox");
+  await clearLocalScannerData();
 }

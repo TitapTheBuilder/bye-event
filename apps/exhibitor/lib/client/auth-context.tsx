@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { clearLocalScannerData } from "@/lib/offline/idb";
 import { registerSyncTriggers, syncEngine } from "@/lib/offline/sync-engine";
 
 export interface ExhibitorProfile {
@@ -84,9 +85,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const logout = useCallback(async () => {
+    // Give pending scans one final chance to reach the server while the
+    // current exhibitor session still exists. Local data is then removed for
+    // privacy even if some entries could not sync while offline.
+    await syncEngine.flush();
     await fetch("/api/auth/logout", { method: "POST" });
-    setExhibitor(null);
     syncEngine.setAuthenticated(false);
+    await clearLocalScannerData();
+    setExhibitor(null);
   }, []);
 
   const value = useMemo(
