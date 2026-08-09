@@ -8,14 +8,16 @@ FROM base AS pruner
 WORKDIR /app
 RUN apk add --no-cache libc6-compat
 COPY . .
-RUN CI=true pnpm install --frozen-lockfile
+RUN pnpm config set registry https://registry.npmmirror.com/ && \
+    CI=true pnpm install --frozen-lockfile
 RUN npx turbo prune @repo/admin --docker
 
 FROM base AS installer
 WORKDIR /app
 RUN apk add --no-cache libc6-compat
 COPY --from=pruner /app/out/json/ .
-RUN pnpm install --frozen-lockfile
+RUN pnpm config set registry https://registry.npmmirror.com/ && \
+    CI=true pnpm install --frozen-lockfile
 COPY --from=pruner /app/out/full/ .
 ENV NEXT_TELEMETRY_DISABLED=1
 # Placeholder values only -- Next's page-data collection step imports
