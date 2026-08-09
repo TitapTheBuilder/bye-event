@@ -8,6 +8,7 @@ FROM base AS pruner
 WORKDIR /app
 RUN apk add --no-cache libc6-compat
 COPY . .
+RUN CI=true pnpm install --frozen-lockfile
 RUN npx turbo prune @repo/admin --docker
 
 FROM base AS installer
@@ -22,7 +23,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # though every route here is force-dynamic and reads the real value at
 # request time. The real DATABASE_URL/SESSION_SECRET/ADMIN_PUBLIC_URL come
 # from docker-compose.yml at container start.
-ENV DATABASE_URL="postgres://build:build@localhost:5432/build"
+ENV DATABASE_URL="postgres://build:[REDACTED]@localhost:5432/build"
 ENV SESSION_SECRET="build-time-placeholder"
 RUN pnpm turbo run build --filter=@repo/admin
 

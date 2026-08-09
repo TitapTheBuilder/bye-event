@@ -1,18 +1,19 @@
 # Multi-stage build for a Turborepo workspace app, producing a small
 # standalone Next.js image (output: "standalone" in next.config.ts).
 # Build from the monorepo root: `docker build -f apps/exhibitor/Dockerfile .`
-FROM node:22-alpine AS base
+FROM node:22-slim AS base
 RUN corepack enable
 
 FROM base AS pruner
 WORKDIR /app
 RUN apk add --no-cache libc6-compat
 COPY . .
+RUN CI=true pnpm install --frozen-lockfile
 RUN npx turbo prune @repo/exhibitor --docker
 
 FROM base AS installer
 WORKDIR /app
-RUN apk add --no-cache libc6-compat
+RUN apt-get update && apt-get install -y libc6 && rm -rf /var/lib/apt/lists/*
 COPY --from=pruner /app/out/json/ .
 RUN pnpm install --frozen-lockfile
 COPY --from=pruner /app/out/full/ .
@@ -22,7 +23,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # though every route here is force-dynamic and reads the real value at
 # request time. The real DATABASE_URL/SESSION_SECRET come from
 # docker-compose.yml at container start.
-ENV DATABASE_URL="postgres://build:build@localhost:5432/build"
+ENV DATABASE_URL="postgres://build:[REDACTED]@localhost:5432/build"
 ENV SESSION_SECRET="build-time-placeholder"
 RUN pnpm turbo run build --filter=@repo/exhibitor
 
@@ -37,4 +38,6 @@ COPY --from=installer --chown=nextjs:nodejs /app/apps/exhibitor/.next/static ./a
 USER nextjs
 EXPOSE 3000
 ENV PORT=3000 NODE_ENV=production NEXT_TELEMETRY_DISABLED=1
+CMD ["node", "apps/exhibitor/server.js"]
+=1
 CMD ["node", "apps/exhibitor/server.js"]
