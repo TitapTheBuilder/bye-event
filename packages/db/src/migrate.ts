@@ -8,6 +8,7 @@ async function main() {
   if (!connectionString) {
     throw new Error("DATABASE_URL is not set");
   }
+  console.log("Actually connecting to:", connectionString);
 
   const migrationClient = postgres(connectionString, { max: 1 });
   const db = drizzle(migrationClient);
