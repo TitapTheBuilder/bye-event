@@ -11,6 +11,7 @@
     "generate": "drizzle-kit generate",
     "migrate": "tsx src/migrate.ts",
     "seed": "tsx src/seed.ts",
+    "create-exhibitor": "tsx src/create-exhibitor.ts",
     "studio": "drizzle-kit studio",
     "typecheck": "tsc --noEmit",
     "lint": "biome lint .",

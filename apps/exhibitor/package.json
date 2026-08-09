@@ -7,7 +7,7 @@
     "dev": "next dev",
     "dev:mobile": "next dev --hostname 0.0.0.0 --experimental-https-key .certs/lan-key.pem --experimental-https-cert .certs/lan-cert.pem",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -H 0.0.0.0 -p 3000",
     "lint": "biome lint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
