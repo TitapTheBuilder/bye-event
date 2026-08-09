@@ -4,6 +4,7 @@ import {
   addOutboxEntry,
   cacheVisitor,
   clearAllOutboxEntryErrors,
+  clearLocalScannerData,
   clearOutboxEntryError,
   getAllOutboxEntries,
   getCachedVisitor,
@@ -112,6 +113,27 @@ describe("visitOutbox", () => {
     await removeOutboxEntriesByQrToken("tok-1");
 
     expect((await getAllOutboxEntries()).map((entry) => entry.localId)).toEqual(["c"]);
+  });
+
+  it("clears cached visitor details and every outbox entry on logout", async () => {
+    await cacheVisitor({
+      qrToken: "tok-private",
+      name: "Private visitor",
+      company: null,
+      phoneNumber: null,
+      email: null,
+      visitorType: "invited",
+    });
+    await addOutboxEntry({
+      localId: "private-scan",
+      qrToken: "tok-private",
+      scannedAt: new Date().toISOString(),
+    });
+
+    await clearLocalScannerData();
+
+    expect(await getCachedVisitor("tok-private")).toBeUndefined();
+    expect(await getAllOutboxEntries()).toHaveLength(0);
   });
 
   it("keeps transient errors syncable (they were never marked permanent)", async () => {
