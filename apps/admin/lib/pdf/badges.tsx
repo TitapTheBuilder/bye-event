@@ -123,26 +123,26 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     justifyContent: "center",
     flexGrow: 1,
-    paddingTop: 26,
-    paddingRight: 10,
+    paddingTop: 32,
+    paddingLeft: 10,
+    alignItems: "flex-end",
   },
   logoStrip: {
     position: "absolute",
-    top: 10,
-    left: 14,
-    height: 24,
+    top: 14,
+    right: 14,
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-  },
-  universityLogo: {
-    width: 24,
-    height: 24,
-    objectFit: "contain",
+    gap: 8,
   },
   brandingLogo: {
-    width: 64,
-    height: 24,
+    width: 32,
+    height: 28,
+    objectFit: "contain",
+  },
+  universityLogo: {
+    width: 28,
+    height: 28,
     objectFit: "contain",
   },
   name: {
@@ -168,11 +168,12 @@ const styles = StyleSheet.create({
     height: 92,
   },
   guestLabel: {
-    fontSize: 12,
+    fontSize: 18,
     fontWeight: 700,
     color: "#111111",
     direction: "rtl",
-    textAlign: "center",
+    textAlign: "right",
+    marginBottom: 16,  
   },
 });
 
@@ -196,8 +197,8 @@ interface BadgeDocumentProps {
 function BadgeLogos({ logoSource }: Pick<BadgeDocumentProps, "logoSource">) {
   return (
     <View style={styles.logoStrip}>
-      <Image src={UT_LOGO_SOURCE} style={styles.universityLogo} />
       {logoSource ? <Image src={logoSource} style={styles.brandingLogo} /> : null}
+      <Image src={UT_LOGO_SOURCE} style={styles.universityLogo} />
     </View>
   );
 }
@@ -221,6 +222,10 @@ function InvitedBadgesDocument({
           {pageVisitors.map((visitor) => (
             <View key={visitor.id} style={styles.badge} wrap={false}>
               <BadgeLogos logoSource={logoSource} />
+              
+              {/* QR Code is now rendered FIRST so it sits on the left */}
+              <Image src={qrDataUrls.get(visitor.qrToken)} style={styles.qr} />
+              
               <View style={styles.textColumn}>
                 <Text
                   style={
@@ -243,7 +248,6 @@ function InvitedBadgesDocument({
                   </Text>
                 ) : null}
               </View>
-              <Image src={qrDataUrls.get(visitor.qrToken)} style={styles.qr} />
             </View>
           ))}
         </Page>
@@ -265,12 +269,16 @@ function GuestBadgesDocument({
         // biome-ignore lint/suspicious/noArrayIndexKey: pages are a static, non-reorderable chunking of the input list
         <Page key={pageIndex} size="LETTER" style={styles.page}>
           {pageVisitors.map((visitor, visitorIndex) => (
-            <View key={visitor.id} style={[styles.badge, styles.guestBadge]} wrap={false}>
+            <View key={visitor.id} style={styles.badge} wrap={false}>
               <BadgeLogos logoSource={logoSource} />
-              <Text style={styles.guestLabel}>
-                {formatGuestBadgeLabel(pageIndex * BADGES_PER_PAGE + visitorIndex)}
-              </Text>
-              <Image src={qrDataUrls.get(visitor.qrToken)} style={styles.qrLarge} />
+              
+              <Image src={qrDataUrls.get(visitor.qrToken)} style={styles.qr} />
+              
+              <View style={styles.textColumn}>
+                <Text style={[styles.guestLabel, styles.rtlText]}>
+                  {formatGuestBadgeLabel(pageIndex * BADGES_PER_PAGE + visitorIndex)}
+                </Text>
+              </View>
             </View>
           ))}
         </Page>
