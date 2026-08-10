@@ -1,5 +1,6 @@
 import { relations, sql } from "drizzle-orm";
 import {
+  customType,
   index,
   integer,
   pgEnum,
@@ -10,6 +11,10 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
+
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType: () => "bytea",
+});
 
 /**
  * Single source of truth for the database schema. Never redeclare any of
@@ -112,6 +117,27 @@ export const eventSettings = pgTable("event_settings", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+/**
+ * Admin-uploaded binary assets (currently just the customer logo), stored
+ * in the database rather than on local disk.
+ *
+ * The admin and exhibitor apps run as separate containers that are NOT
+ * guaranteed to share a filesystem -- the app Dockerfiles build
+ * self-contained single-container images, and only docker-compose happens
+ * to wire up a shared uploads volume. What they always share is this
+ * database, so that is where the bytes belong: an asset uploaded in admin
+ * is then readable by the exhibitor app in every deployment topology.
+ *
+ * `path` is the URL path relative to /uploads/ (e.g. "logos/abc123.png"),
+ * which is exactly what event_settings.logo_url points at.
+ */
+export const uploads = pgTable("uploads", {
+  path: text("path").primaryKey(),
+  contentType: varchar("content_type", { length: 100 }).notNull(),
+  data: bytea("data").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const exhibitorsRelations = relations(exhibitors, ({ many }) => ({
   visits: many(visits),
 }));
@@ -140,3 +166,5 @@ export type VisitSyncEvent = typeof visitSyncEvents.$inferSelect;
 export type Admin = typeof admins.$inferSelect;
 export type NewAdmin = typeof admins.$inferInsert;
 export type EventSettings = typeof eventSettings.$inferSelect;
+export type Upload = typeof uploads.$inferSelect;
+export type NewUpload = typeof uploads.$inferInsert;

@@ -1,4 +1,4 @@
-import { db, upsertEventSettings } from "@repo/db";
+import { db, putUpload, upsertEventSettings } from "@repo/db";
 import { logoUploadSchema } from "@repo/shared/schemas";
 import { extractBrandColors } from "@/lib/colors";
 import { forbiddenOrigin, isSameOriginRequest, unauthorized } from "@/lib/http";
@@ -36,7 +36,12 @@ export async function POST(request: Request) {
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const { filePath, url } = await saveLogoUpload(buffer, parsed.data.contentType);
+  const { filePath, url, storagePath } = await saveLogoUpload(buffer, parsed.data.contentType);
+
+  // The copy that actually matters. The exhibitor app runs as a separate
+  // container and cannot read this one's disk, but both talk to the same
+  // database -- so that is what its /uploads route serves the logo from.
+  await putUpload(db, storagePath, parsed.data.contentType, buffer);
 
   const extracted = await extractBrandColors(filePath);
 

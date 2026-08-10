@@ -10,7 +10,10 @@ import { type NextRequest, NextResponse } from "next/server";
  * Next.js has shipped a middleware-bypass vulnerability before
  * (CVE-2025-29927).
  */
-const PUBLIC_PATHS = ["/login"];
+// `/uploads` serves the customer logo, which both apps render publicly
+// (before login), so it must not be gated behind an admin session -- see
+// the route handler's own docstring.
+const PUBLIC_PATHS = ["/login", "/uploads"];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

@@ -78,7 +78,8 @@ if [ ! -d "/var/lib/postgresql/data/base" ]; then\n\
       );\n\
       CREATE TABLE IF NOT EXISTS exhibitors (\n\
         id uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,\n\
-        name varchar(200) NOT NULL,\n\
+        first_name varchar(200) NOT NULL,\n\
+        last_name varchar(200) NOT NULL,\n\
         username varchar(100) UNIQUE NOT NULL,\n\
         password_hash text NOT NULL,\n\
         phone_number varchar(30) UNIQUE NOT NULL,\n\
@@ -88,7 +89,8 @@ if [ ! -d "/var/lib/postgresql/data/base" ]; then\n\
       CREATE TABLE IF NOT EXISTS visitors (\n\
         id uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,\n\
         qr_token varchar(64) UNIQUE NOT NULL,\n\
-        name varchar(200),\n\
+        first_name varchar(200),\n\
+        last_name varchar(200),\n\
         company varchar(200),\n\
         phone_number varchar(30),\n\
         email varchar(200),\n\

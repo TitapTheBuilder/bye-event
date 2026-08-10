@@ -5,4 +5,5 @@ export * from "./visits";
 export * from "./exhibitors";
 export * from "./admins";
 export * from "./event-settings";
+export * from "./uploads";
 export * from "./dashboard";

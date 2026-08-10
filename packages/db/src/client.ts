@@ -96,6 +96,14 @@ async function ensureTables() {
       );
     `;
     await client`
+      CREATE TABLE IF NOT EXISTS uploads (
+        path text PRIMARY KEY NOT NULL,
+        content_type varchar(100) NOT NULL,
+        data bytea NOT NULL,
+        created_at timestamp with time zone DEFAULT now() NOT NULL
+      );
+    `;
+    await client`
       CREATE TABLE IF NOT EXISTS visit_sync_events (
         local_id uuid PRIMARY KEY NOT NULL,
         exhibitor_id uuid NOT NULL REFERENCES exhibitors(id),

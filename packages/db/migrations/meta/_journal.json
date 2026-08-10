@@ -29,6 +29,13 @@
       "when": 1786350159567,
       "tag": "0003_split-person-names-contract",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1786377748599,
+      "tag": "0004_mature_vampiro",
+      "breakpoints": true
     }
   ]
 }

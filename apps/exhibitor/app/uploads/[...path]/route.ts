@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { db, getUpload } from "@repo/db";
 import { NextResponse } from "next/server";
 
 const CONTENT_TYPE_BY_EXTENSION: Record<string, string> = {
@@ -13,14 +14,19 @@ const CONTENT_TYPE_BY_EXTENSION: Record<string, string> = {
 const SAFE_SEGMENT = /^[a-zA-Z0-9._-]+$/;
 
 function getUploadsDir(): string {
-  return process.env.UPLOADS_DIR ?? path.join(process.cwd(), ".uploads");
+  return process.env.UPLOADS_DIR ?? path.join(process.cwd(), "../../.uploads");
 }
 
 /**
- * Serves admin-uploaded assets (the business-customer logo) directly from
- * the shared uploads volume so the exhibitor app can resolve the relative
- * `/uploads/...` path stored in event_settings.logo_url without needing
- * to proxy through the admin app.
+ * Serves admin-uploaded assets (the business-customer logo) so this app
+ * can resolve the relative `/uploads/...` path stored in
+ * event_settings.logo_url without proxying through the admin app.
+ *
+ * Reads from the `uploads` table, because the admin app runs as a separate
+ * container and its local disk is NOT reachable from here in a normal
+ * deployment -- only docker-compose happens to mount a shared volume.
+ * The UPLOADS_DIR read is kept as a fallback for assets uploaded before
+ * database storage existed, and for the shared-volume/dev setup.
  *
  * Mirrors apps/admin/app/uploads/[...path]/route.ts — intentionally
  * unauthenticated (logo is public) and path-traversal-safe (only flat
@@ -32,6 +38,16 @@ export async function GET(_request: Request, { params }: { params: Promise<{ pat
   // Reject anything that isn't a flat, safe filename per segment.
   if (segments.length === 0 || !segments.every((s) => SAFE_SEGMENT.test(s))) {
     return NextResponse.json({ error: "Invalid path" }, { status: 400 });
+  }
+
+  const stored = await getUpload(db, segments.join("/"));
+  if (stored) {
+    return new NextResponse(new Uint8Array(stored.data), {
+      headers: {
+        "Content-Type": stored.contentType,
+        "Cache-Control": "public, max-age=31536000, immutable",
+      },
+    });
   }
 
   const uploadsDir = path.resolve(getUploadsDir());

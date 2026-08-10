@@ -3,16 +3,23 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 /**
- * Local-disk storage for admin-uploaded assets (currently just the
- * business-customer logo). Kept behind a small, disk-specific module so
- * swapping to S3-compatible storage later (per the build spec, either is
- * acceptable) only means rewriting this one file.
+ * Storage for admin-uploaded assets (currently just the business-customer
+ * logo). Kept behind this one small module so swapping to S3-compatible
+ * storage later (per the build spec, either is acceptable) only means
+ * rewriting this file.
  *
- * Storage location is UPLOADS_DIR (wired to a Docker volume in
- * docker-compose.yml so it survives container recreation) -- deliberately
- * NOT apps/admin/public, since files written there at container runtime
- * aren't guaranteed to be served by the standalone Next.js output. Files
- * are served back out by app/uploads/[...path]/route.ts instead.
+ * The DATABASE is the system of record: the admin and exhibitor apps are
+ * separate containers with no guaranteed shared filesystem (the app
+ * Dockerfiles build self-contained single-container images; only
+ * docker-compose happens to mount a shared uploads volume), so a logo
+ * written only to local disk is a broken image in the other app. Both
+ * apps' /uploads/[...path] routes read from the `uploads` table.
+ *
+ * That database write is done by the caller, not here -- this module is
+ * pulled in by badge-PDF rendering, which must stay importable without a
+ * live DB connection. What this module owns is the disk copy under
+ * UPLOADS_DIR, which node-vibrant colour extraction and badge rendering
+ * both need as a real file path.
  */
 
 const EXTENSION_BY_CONTENT_TYPE: Record<string, string> = {
@@ -27,7 +34,7 @@ export function getUploadsDir(): string {
   // dev-local scratch directory, never part of the app's source tree, so
   // Next's build-time file tracer must not attempt to resolve or bundle
   // whatever it happens to point to.
-  return process.env.UPLOADS_DIR ?? path.join(process.cwd(), ".uploads");
+  return process.env.UPLOADS_DIR ?? path.join(process.cwd(), "../../.uploads");
 }
 
 export interface SavedUpload {
@@ -35,6 +42,8 @@ export interface SavedUpload {
   filePath: string;
   /** Origin-relative URL to store in event_settings.logo_url. */
   url: string;
+  /** Key for the `uploads` table -- the URL path relative to /uploads/. */
+  storagePath: string;
 }
 
 export async function saveLogoUpload(buffer: Buffer, contentType: string): Promise<SavedUpload> {
@@ -48,13 +57,12 @@ export async function saveLogoUpload(buffer: Buffer, contentType: string): Promi
   const filePath = path.join(/* turbopackIgnore: true */ dir, filename);
   await writeFile(filePath, buffer);
 
-  // Deliberately origin-RELATIVE. Both apps mount the same uploads volume
-  // and serve it from their own /uploads/[...path] route, so each one
-  // resolves this against whatever host the browser is actually on.
-  // Baking in an absolute origin here instead breaks the moment that
-  // origin isn't reachable from the viewer's device (the classic case:
-  // a `localhost` default that means "the phone itself" on a real server).
-  return { filePath, url: `/uploads/logos/${filename}` };
+  // Deliberately origin-RELATIVE, so each app resolves it against whatever
+  // host the browser is actually on. Baking in an absolute origin here
+  // breaks the moment that origin isn't reachable from the viewer's device
+  // (the classic case: a `localhost` default, which on a phone means the
+  // phone itself).
+  return { filePath, url: `/uploads/logos/${filename}`, storagePath: `logos/${filename}` };
 }
 
 const SAFE_SEGMENT = /^[a-zA-Z0-9._-]+$/;
