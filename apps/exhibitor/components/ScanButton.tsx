@@ -23,7 +23,8 @@ export function ScanButton() {
         <rect x="7" y="7" width="4" height="4" rx="0.5" fill="white" />
         <rect x="13" y="7" width="4" height="4" rx="0.5" fill="white" />
         <rect x="7" y="13" width="4" height="4" rx="0.5" fill="white" />
-        <path d="M14 14h2v2h-2zM17 14h2v2h-2zM14 17h2v2h-2zM17 17h2v2h-2z" fill="white" />
+        <rect x="13" y="13" width="4" height="4" rx="0.5" fill="white" />
+
       </svg>
       <span className="sr-only">Scan</span>
     </Link>
