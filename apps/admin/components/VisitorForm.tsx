@@ -1,11 +1,17 @@
 "use client";
 
-import { FormField, buttonPrimaryClassName, buttonSecondaryClassName, inputClassName } from "@/components/FormField";
-import { useTranslation } from "@/lib/client/language-context";
 import { useState } from "react";
+import {
+  buttonPrimaryClassName,
+  buttonSecondaryClassName,
+  FormField,
+  inputClassName,
+} from "@/components/FormField";
+import { useTranslation } from "@/lib/client/language-context";
 
 export interface VisitorFormValues {
-  name: string;
+  firstName: string;
+  lastName: string;
   company: string;
   phoneNumber: string;
   email: string;
@@ -13,7 +19,8 @@ export interface VisitorFormValues {
 }
 
 const EMPTY_VALUES: VisitorFormValues = {
-  name: "",
+  firstName: "",
+  lastName: "",
   company: "",
   phoneNumber: "",
   email: "",
@@ -49,14 +56,26 @@ export function VisitorForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <FormField label={t("form.name")}>
-        <input
-          className={inputClassName}
-          value={values.name}
-          onChange={(e) => setValues((v) => ({ ...v, name: e.target.value }))}
-          placeholder="Jane Doe"
-        />
-      </FormField>
+      <div className="grid grid-cols-2 gap-4">
+        <FormField label={t("form.firstName")}>
+          <input
+            className={inputClassName}
+            value={values.firstName}
+            onChange={(e) => setValues((v) => ({ ...v, firstName: e.target.value }))}
+            placeholder="Jane"
+            autoComplete="given-name"
+          />
+        </FormField>
+        <FormField label={t("form.lastName")}>
+          <input
+            className={inputClassName}
+            value={values.lastName}
+            onChange={(e) => setValues((v) => ({ ...v, lastName: e.target.value }))}
+            placeholder="Doe"
+            autoComplete="family-name"
+          />
+        </FormField>
+      </div>
       <FormField label={t("form.company")}>
         <input
           className={inputClassName}

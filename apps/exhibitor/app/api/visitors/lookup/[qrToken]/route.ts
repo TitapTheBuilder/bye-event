@@ -1,8 +1,8 @@
 import { db, getVisitorByQrToken } from "@repo/db";
 import { checkRateLimit } from "@repo/shared/auth";
 import { VISITOR_LOOKUP_RATE_LIMIT } from "@repo/shared/constants";
-import { getClientIp } from "@/lib/http";
 import { NextResponse } from "next/server";
+import { getClientIp } from "@/lib/http";
 
 /**
  * Intentionally unauthenticated -- scanning must work before an exhibitor
@@ -10,10 +10,7 @@ import { NextResponse } from "next/server";
  * it's rate-limited per IP on top of qr_token already being long/random
  * (32 chars, ~190 bits of entropy) so it can't be brute-forced.
  */
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ qrToken: string }> },
-) {
+export async function GET(request: Request, { params }: { params: Promise<{ qrToken: string }> }) {
   const { qrToken } = await params;
 
   const ip = getClientIp(request);
@@ -40,7 +37,8 @@ export async function GET(
   return NextResponse.json({
     visitor: {
       qrToken: visitor.qrToken,
-      name: visitor.name,
+      firstName: visitor.firstName,
+      lastName: visitor.lastName,
       company: visitor.company,
       phoneNumber: visitor.phoneNumber,
       email: visitor.email,

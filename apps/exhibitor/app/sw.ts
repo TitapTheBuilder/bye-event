@@ -2,7 +2,7 @@
 /// <reference lib="webworker" />
 import { defaultCache } from "@serwist/turbopack/worker";
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
-import { NetworkFirst, Serwist } from "serwist";
+import { NetworkOnly, Serwist } from "serwist";
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -18,17 +18,12 @@ const serwist = new Serwist({
   clientsClaim: true,
   navigationPreload: true,
   runtimeCaching: [
-    // The public visitor-lookup call has its own on-device cache
-    // (visitorCache in IndexedDB, see lib/offline/idb.ts) which is what
-    // actually powers instant/offline re-viewing -- this network-first
-    // entry just keeps the app shell from erroring outright if the SW
-    // intercepts the request while fully offline before that layer runs.
+    // Never cache API responses. Authenticated exports and visitor PII must
+    // not remain readable from Cache Storage after logout. Offline visitor
+    // re-viewing is provided by the explicitly managed IndexedDB cache.
     {
-      matcher: /\/api\/visitors\/lookup\//,
-      handler: new NetworkFirst({
-        cacheName: "visitor-lookup",
-        networkTimeoutSeconds: 3,
-      }),
+      matcher: ({ url }) => url.origin === self.location.origin && url.pathname.startsWith("/api/"),
+      handler: new NetworkOnly(),
     },
     ...defaultCache,
   ],

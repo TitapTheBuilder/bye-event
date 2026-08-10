@@ -1,21 +1,27 @@
 "use client";
 
+import type { Visitor } from "@repo/db";
+import { formatPersonName } from "@repo/shared/person-name";
+import Link from "next/link";
+import { useState } from "react";
+import {
+  buttonPrimaryClassName,
+  buttonSecondaryClassName,
+  inputClassName,
+} from "@/components/FormField";
 import { Modal } from "@/components/Modal";
 import { Pagination } from "@/components/Pagination";
 import { StatusPill, VisitorTypeBadge } from "@/components/StatusPill";
 import { VisitorForm, type VisitorFormValues } from "@/components/VisitorForm";
-import { buttonPrimaryClassName, buttonSecondaryClassName, inputClassName } from "@/components/FormField";
+import { useTranslation } from "@/lib/client/language-context";
 import { useToast } from "@/lib/client/toast";
 import { useVisitors } from "@/lib/client/use-visitors";
-import { useTranslation } from "@/lib/client/language-context";
-import type { Visitor } from "@repo/db";
-import Link from "next/link";
-import { useState } from "react";
 
 function toFormValues(visitor?: Visitor): Partial<VisitorFormValues> | undefined {
   if (!visitor) return undefined;
   return {
-    name: visitor.name ?? "",
+    firstName: visitor.firstName ?? "",
+    lastName: visitor.lastName ?? "",
     company: visitor.company ?? "",
     phoneNumber: visitor.phoneNumber ?? "",
     email: visitor.email ?? "",
@@ -39,9 +45,9 @@ export default function VisitorsPage() {
   } = useVisitors();
   const { showToast } = useToast();
 
-  const [modal, setModal] = useState<{ mode: "create" } | { mode: "edit"; visitor: Visitor } | null>(
-    null,
-  );
+  const [modal, setModal] = useState<
+    { mode: "create" } | { mode: "edit"; visitor: Visitor } | null
+  >(null);
 
   async function handleCreate(values: VisitorFormValues) {
     const res = await fetch("/api/visitors", {
@@ -85,7 +91,9 @@ export default function VisitorsPage() {
 
     if (wasActive) {
       showToast({
-        message: t("visitors.deactivated", { name: visitor.name ?? t("common.guest") }),
+        message: t("visitors.deactivated", {
+          name: formatPersonName(visitor.firstName, visitor.lastName) || t("common.guest"),
+        }),
         actionLabel: t("common.undo"),
         onAction: async () => {
           await fetch(`/api/visitors/${visitor.id}`, {
@@ -99,7 +107,7 @@ export default function VisitorsPage() {
     }
   }
 
-  function toggleSort(column: "createdAt" | "name" | "company") {
+  function toggleSort(column: "createdAt" | "firstName" | "lastName" | "company") {
     if (query.sortBy === column) {
       setSort(column, query.sortDir === "asc" ? "desc" : "asc");
     } else {
@@ -107,7 +115,7 @@ export default function VisitorsPage() {
     }
   }
 
-  function sortIndicator(column: "createdAt" | "name" | "company") {
+  function sortIndicator(column: "createdAt" | "firstName" | "lastName" | "company") {
     if (query.sortBy !== column) return null;
     return query.sortDir === "asc" ? " ▲" : " ▼";
   }
@@ -144,7 +152,9 @@ export default function VisitorsPage() {
         <select
           value={query.visitorType ?? ""}
           onChange={(e) =>
-            setVisitorTypeFilter(e.target.value === "" ? undefined : (e.target.value as "invited" | "guest"))
+            setVisitorTypeFilter(
+              e.target.value === "" ? undefined : (e.target.value as "invited" | "guest"),
+            )
           }
           className={`${inputClassName} w-40`}
         >
@@ -167,11 +177,26 @@ export default function VisitorsPage() {
         <table className={`w-full min-w-[820px] text-sm text-${dir === "rtl" ? "end" : "start"}`}>
           <thead className="border-b border-border-subtle text-text-secondary">
             <tr>
-              <th className="cursor-pointer select-none px-4 py-3" onClick={() => toggleSort("name")}>
-                {t("visitors.name")}{sortIndicator("name")}
+              <th
+                className="cursor-pointer select-none px-4 py-3"
+                onClick={() => toggleSort("firstName")}
+              >
+                {t("visitors.firstName")}
+                {sortIndicator("firstName")}
               </th>
-              <th className="cursor-pointer select-none px-4 py-3" onClick={() => toggleSort("company")}>
-                {t("visitors.company")}{sortIndicator("company")}
+              <th
+                className="cursor-pointer select-none px-4 py-3"
+                onClick={() => toggleSort("lastName")}
+              >
+                {t("visitors.lastName")}
+                {sortIndicator("lastName")}
+              </th>
+              <th
+                className="cursor-pointer select-none px-4 py-3"
+                onClick={() => toggleSort("company")}
+              >
+                {t("visitors.company")}
+                {sortIndicator("company")}
               </th>
               <th className="px-4 py-3">{t("visitors.contact")}</th>
               <th className="px-4 py-3">{t("visitors.type")}</th>
@@ -180,28 +205,32 @@ export default function VisitorsPage() {
                 className="cursor-pointer select-none px-4 py-3"
                 onClick={() => toggleSort("createdAt")}
               >
-                {t("visitors.created")}{sortIndicator("createdAt")}
+                {t("visitors.created")}
+                {sortIndicator("createdAt")}
               </th>
-              <th className={`px-4 py-3 text-${dir === "rtl" ? "start" : "end"}`}>{t("visitors.actions")}</th>
+              <th className={`px-4 py-3 text-${dir === "rtl" ? "start" : "end"}`}>
+                {t("visitors.actions")}
+              </th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-text-secondary">
+                <td colSpan={8} className="px-4 py-8 text-center text-text-secondary">
                   {t("common.loading")}
                 </td>
               </tr>
             ) : visitors.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-text-secondary">
+                <td colSpan={8} className="px-4 py-8 text-center text-text-secondary">
                   {t("visitors.noVisitors")}
                 </td>
               </tr>
             ) : (
               visitors.map((visitor) => (
                 <tr key={visitor.id} className="border-b border-border-subtle last:border-0">
-                  <td className="px-4 py-3 text-text-primary">{visitor.name ?? "—"}</td>
+                  <td className="px-4 py-3 text-text-primary">{visitor.firstName ?? "—"}</td>
+                  <td className="px-4 py-3 text-text-primary">{visitor.lastName ?? "—"}</td>
                   <td className="px-4 py-3 text-text-secondary">{visitor.company ?? "—"}</td>
                   <td className="px-4 py-3 text-text-secondary">
                     <div>{visitor.phoneNumber ?? "—"}</div>
@@ -234,7 +263,9 @@ export default function VisitorsPage() {
                             : "border-danger/40 text-danger hover:bg-danger/10"
                         }`}
                       >
-                        {visitor.deactivatedAt ? t("visitors.reactivate") : t("visitors.deactivate")}
+                        {visitor.deactivatedAt
+                          ? t("visitors.reactivate")
+                          : t("visitors.deactivate")}
                       </button>
                     </div>
                   </td>
@@ -245,7 +276,12 @@ export default function VisitorsPage() {
         </table>
       </div>
 
-      <Pagination page={query.page} pageSize={query.pageSize} total={total} onPageChange={setPage} />
+      <Pagination
+        page={query.page}
+        pageSize={query.pageSize}
+        total={total}
+        onPageChange={setPage}
+      />
 
       {modal ? (
         <Modal
@@ -254,7 +290,9 @@ export default function VisitorsPage() {
         >
           <VisitorForm
             initialValues={modal.mode === "edit" ? toFormValues(modal.visitor) : undefined}
-            submitLabel={modal.mode === "create" ? t("visitors.addSubmit") : t("visitors.editSubmit")}
+            submitLabel={
+              modal.mode === "create" ? t("visitors.addSubmit") : t("visitors.editSubmit")
+            }
             onCancel={() => setModal(null)}
             onSubmit={(values) =>
               modal.mode === "create" ? handleCreate(values) : handleEdit(modal.visitor.id, values)

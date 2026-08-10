@@ -25,9 +25,18 @@ export interface ParsedImport {
 }
 
 const HEADER_ALIASES: Record<string, keyof VisitorImportRow> = {
-  name: "name",
-  fullname: "name",
-  "full name": "name",
+  // Legacy single-name columns are preserved losslessly rather than split
+  // heuristically, which would corrupt compound and Persian names.
+  name: "firstName",
+  fullname: "firstName",
+  "full name": "firstName",
+  firstname: "firstName",
+  "first name": "firstName",
+  givenname: "firstName",
+  "given name": "firstName",
+  lastname: "lastName",
+  "last name": "lastName",
+  surname: "lastName",
   company: "company",
   organization: "company",
   organisation: "company",

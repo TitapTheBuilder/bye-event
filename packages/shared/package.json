@@ -7,7 +7,8 @@
     ".": "./src/index.ts",
     "./schemas": "./src/schemas/index.ts",
     "./auth": "./src/auth/index.ts",
-    "./constants": "./src/constants.ts"
+    "./constants": "./src/constants.ts",
+    "./person-name": "./src/person-name.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

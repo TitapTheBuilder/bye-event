@@ -9,7 +9,7 @@ export interface VisitorsQuery {
   includeDeactivated: boolean;
   page: number;
   pageSize: number;
-  sortBy: "createdAt" | "name" | "company";
+  sortBy: "createdAt" | "firstName" | "lastName" | "company";
   sortDir: "asc" | "desc";
 }
 
@@ -65,7 +65,8 @@ export function useVisitors(initialQuery: Partial<VisitorsQuery> = {}) {
     [],
   );
   const setVisitorTypeFilter = useCallback(
-    (visitorType: VisitorsQuery["visitorType"]) => setQuery((q) => ({ ...q, visitorType, page: 1 })),
+    (visitorType: VisitorsQuery["visitorType"]) =>
+      setQuery((q) => ({ ...q, visitorType, page: 1 })),
     [],
   );
   const setIncludeDeactivated = useCallback(

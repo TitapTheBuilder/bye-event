@@ -15,6 +15,20 @@
       "when": 1786181740703,
       "tag": "0001_heavy_tag",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786350114022,
+      "tag": "0002_split-person-names-expand",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1786350159567,
+      "tag": "0003_split-person-names-contract",
+      "breakpoints": true
     }
   ]
 }

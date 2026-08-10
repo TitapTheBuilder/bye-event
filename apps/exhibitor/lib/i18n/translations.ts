@@ -7,7 +7,8 @@ const en = {
 
   // ── Login ────────────────────────────────────────────
   "login.title": "Sign in",
-  "login.subtitle": "Scanning works without signing in \u2014 sign in to save your scans to the event.",
+  "login.subtitle":
+    "Scanning works without signing in \u2014 sign in to save your scans to the event.",
   "login.username": "Username",
   "login.password": "Password",
   "login.submit": "Sign in",
@@ -17,8 +18,10 @@ const en = {
 
   // ── Signup ───────────────────────────────────────────
   "signup.title": "Create your account",
-  "signup.subtitle": "Any scans you\u2019ve already made on this device will save automatically once you sign up.",
-  "signup.name": "Full name",
+  "signup.subtitle":
+    "Any scans you\u2019ve already made on this device will save automatically once you sign up.",
+  "signup.firstName": "First name",
+  "signup.lastName": "Last name",
   "signup.username": "Username",
   "signup.phone": "Phone number",
   "signup.password": "Password",
@@ -29,8 +32,10 @@ const en = {
 
   // ── Scan ─────────────────────────────────────────────
   "scan.starting": "Starting camera\u2026",
-  "scan.denied": "Camera access was denied. Allow camera access, or enter a badge code manually below.",
-  "scan.httpsRequired": "Camera scanning requires HTTPS on mobile. Open the secure app URL, or enter a badge code manually below.",
+  "scan.denied":
+    "Camera access was denied. Allow camera access, or enter a badge code manually below.",
+  "scan.httpsRequired":
+    "Camera scanning requires HTTPS on mobile. Open the secure app URL, or enter a badge code manually below.",
   "scan.unavailable": "No camera available. Enter a badge code manually below.",
   "scan.cancel": "Cancel",
   "scan.torch": "Torch",
@@ -55,6 +60,10 @@ const en = {
   "scanned.pending": "Pending details\u2026",
   "scanned.willSync": "Saved \u2014 will sync",
   "scanned.syncError": "Sync error",
+  "scanned.exportCsv": "Export CSV",
+  "scanned.exportPdf": "Export PDF",
+  "scanned.exporting": "Preparing export…",
+  "scanned.exportError": "Could not export the scanned list.",
 
   // ── Profile ──────────────────────────────────────────
   "profile.phone": "Phone",
@@ -110,7 +119,8 @@ const fa: Record<keyof typeof en, string> = {
   // ── ثبت‌نام ───────────────────────────────────────────
   "signup.title": "ایجاد حساب کاربری",
   "signup.subtitle": "اسکن‌های قبلی شما پس از ثبت‌نام به‌صورت خودکار ذخیره می‌شوند.",
-  "signup.name": "نام کامل",
+  "signup.firstName": "نام",
+  "signup.lastName": "نام خانوادگی",
   "signup.username": "نام کاربری",
   "signup.phone": "شماره تلفن",
   "signup.password": "رمز عبور",
@@ -121,8 +131,10 @@ const fa: Record<keyof typeof en, string> = {
 
   // ── اسکن ─────────────────────────────────────────────
   "scan.starting": "در حال راه‌اندازی دوربین…",
-  "scan.denied": "دسترسی دوربین رد شد. دسترسی دوربین را مجاز کنید یا کد نشان را به صورت دستی وارد کنید.",
-  "scan.httpsRequired": "اسکن با دوربین در موبایل به HTTPS نیاز دارد. نشانی امن برنامه را باز کنید یا کد نشان را دستی وارد کنید.",
+  "scan.denied":
+    "دسترسی دوربین رد شد. دسترسی دوربین را مجاز کنید یا کد نشان را به صورت دستی وارد کنید.",
+  "scan.httpsRequired":
+    "اسکن با دوربین در موبایل به HTTPS نیاز دارد. نشانی امن برنامه را باز کنید یا کد نشان را دستی وارد کنید.",
   "scan.unavailable": "دوربینی در دسترس نیست. کد نشان را به صورت دستی وارد کنید.",
   "scan.cancel": "انصراف",
   "scan.torch": "فلش",
@@ -147,6 +159,10 @@ const fa: Record<keyof typeof en, string> = {
   "scanned.pending": "در انتظار جزئیات…",
   "scanned.willSync": "ذخیره شد — همگام‌سازی خواهد شد",
   "scanned.syncError": "خطای همگام‌سازی",
+  "scanned.exportCsv": "خروجی CSV",
+  "scanned.exportPdf": "خروجی PDF",
+  "scanned.exporting": "در حال آماده‌سازی خروجی…",
+  "scanned.exportError": "خروجی گرفتن از فهرست اسکن‌شده ممکن نبود.",
 
   // ── پروفایل ──────────────────────────────────────────
   "profile.phone": "تلفن",

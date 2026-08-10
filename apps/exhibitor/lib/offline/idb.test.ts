@@ -4,8 +4,8 @@ import {
   addOutboxEntry,
   cacheVisitor,
   clearAllOutboxEntryErrors,
-  clearLocalScannerData,
   clearOutboxEntryError,
+  clearScannerDataAfterLogout,
   getAllOutboxEntries,
   getCachedVisitor,
   getSyncableOutboxEntries,
@@ -24,7 +24,8 @@ describe("visitorCache", () => {
   it("caches and retrieves a visitor by qrToken", async () => {
     await cacheVisitor({
       qrToken: "tok-1",
-      name: "Ada Lovelace",
+      firstName: "Ada",
+      lastName: "Lovelace",
       company: "Analytical Engines Inc",
       phoneNumber: null,
       email: null,
@@ -32,7 +33,8 @@ describe("visitorCache", () => {
     });
 
     const cached = await getCachedVisitor("tok-1");
-    expect(cached?.name).toBe("Ada Lovelace");
+    expect(cached?.firstName).toBe("Ada");
+    expect(cached?.lastName).toBe("Lovelace");
     expect(cached?.cachedAt).toBeTruthy();
   });
 
@@ -43,7 +45,8 @@ describe("visitorCache", () => {
   it("removes a stale cached visitor rejected by the server", async () => {
     await cacheVisitor({
       qrToken: "tok-stale",
-      name: "Stale visitor",
+      firstName: "Stale",
+      lastName: "Visitor",
       company: null,
       phoneNumber: null,
       email: null,
@@ -107,7 +110,11 @@ describe("visitOutbox", () => {
 
   it("removes all duplicate local events for a QR token", async () => {
     await addOutboxEntry({ localId: "a", qrToken: "tok-1", scannedAt: new Date().toISOString() });
-    await addOutboxEntry({ localId: "b", qrToken: "  tok-1 ", scannedAt: new Date().toISOString() });
+    await addOutboxEntry({
+      localId: "b",
+      qrToken: "  tok-1 ",
+      scannedAt: new Date().toISOString(),
+    });
     await addOutboxEntry({ localId: "c", qrToken: "tok-2", scannedAt: new Date().toISOString() });
 
     await removeOutboxEntriesByQrToken("tok-1");
@@ -115,10 +122,11 @@ describe("visitOutbox", () => {
     expect((await getAllOutboxEntries()).map((entry) => entry.localId)).toEqual(["c"]);
   });
 
-  it("clears cached visitor details and every outbox entry on logout", async () => {
+  it("clears cached visitor details but preserves unsynced entries on logout", async () => {
     await cacheVisitor({
       qrToken: "tok-private",
-      name: "Private visitor",
+      firstName: "Private",
+      lastName: "Visitor",
       company: null,
       phoneNumber: null,
       email: null,
@@ -129,11 +137,19 @@ describe("visitOutbox", () => {
       qrToken: "tok-private",
       scannedAt: new Date().toISOString(),
     });
+    await addOutboxEntry({
+      localId: "synced-scan",
+      qrToken: "tok-synced",
+      scannedAt: new Date().toISOString(),
+    });
+    await markOutboxEntriesSynced(["synced-scan"]);
 
-    await clearLocalScannerData();
+    await clearScannerDataAfterLogout();
 
     expect(await getCachedVisitor("tok-private")).toBeUndefined();
-    expect(await getAllOutboxEntries()).toHaveLength(0);
+    const remaining = await getAllOutboxEntries();
+    expect(remaining.map((entry) => entry.localId)).toEqual(["private-scan"]);
+    expect(remaining[0]?.synced).toBe(false);
   });
 
   it("keeps transient errors syncable (they were never marked permanent)", async () => {

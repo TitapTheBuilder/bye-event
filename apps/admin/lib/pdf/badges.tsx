@@ -145,15 +145,15 @@ const styles = StyleSheet.create({
     height: 28,
     objectFit: "contain",
   },
-  name: {
-    fontSize: 15,
+  firstName: {
+    fontSize: 10,
+    fontWeight: 400,
+    color: "#444444",
+  },
+  prominentText: {
+    fontSize: 18,
     fontWeight: 700,
     color: "#111111",
-  },
-  company: {
-    marginTop: 3,
-    fontSize: 10,
-    color: "#444444",
   },
   rtlText: {
     direction: "rtl",
@@ -168,12 +168,9 @@ const styles = StyleSheet.create({
     height: 92,
   },
   guestLabel: {
-    fontSize: 18,
-    fontWeight: 700,
-    color: "#111111",
     direction: "rtl",
     textAlign: "right",
-    marginBottom: 16,  
+    marginBottom: 16,
   },
 });
 
@@ -222,26 +219,39 @@ function InvitedBadgesDocument({
           {pageVisitors.map((visitor) => (
             <View key={visitor.id} style={styles.badge} wrap={false}>
               <BadgeLogos logoSource={logoSource} />
-              
+
               {/* QR Code is now rendered FIRST so it sits on the left */}
               <Image src={qrDataUrls.get(visitor.qrToken)} style={styles.qr} />
-              
+
               <View style={styles.textColumn}>
-                <Text
-                  style={
-                    containsArabicScript(visitor.name ?? "")
-                      ? [styles.name, styles.rtlText]
-                      : styles.name
-                  }
-                >
-                  {visitor.name ?? "Guest"}
-                </Text>
+                {visitor.firstName ? (
+                  <Text
+                    style={
+                      containsArabicScript(visitor.firstName)
+                        ? [styles.firstName, styles.rtlText]
+                        : styles.firstName
+                    }
+                  >
+                    {visitor.firstName}
+                  </Text>
+                ) : null}
+                {visitor.lastName ? (
+                  <Text
+                    style={
+                      containsArabicScript(visitor.lastName)
+                        ? [styles.prominentText, styles.rtlText]
+                        : styles.prominentText
+                    }
+                  >
+                    {visitor.lastName}
+                  </Text>
+                ) : null}
                 {visitor.company ? (
                   <Text
                     style={
                       containsArabicScript(visitor.company)
-                        ? [styles.company, styles.rtlText]
-                        : styles.company
+                        ? [styles.prominentText, styles.rtlText]
+                        : styles.prominentText
                     }
                   >
                     {visitor.company}
@@ -271,11 +281,11 @@ function GuestBadgesDocument({
           {pageVisitors.map((visitor, visitorIndex) => (
             <View key={visitor.id} style={styles.badge} wrap={false}>
               <BadgeLogos logoSource={logoSource} />
-              
+
               <Image src={qrDataUrls.get(visitor.qrToken)} style={styles.qr} />
-              
+
               <View style={styles.textColumn}>
-                <Text style={[styles.guestLabel, styles.rtlText]}>
+                <Text style={[styles.prominentText, styles.guestLabel, styles.rtlText]}>
                   {formatGuestBadgeLabel(pageIndex * BADGES_PER_PAGE + visitorIndex)}
                 </Text>
               </View>

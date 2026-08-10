@@ -1,6 +1,6 @@
 import { db, getExhibitorById } from "@repo/db";
-import { getExhibitorSession } from "@/lib/session";
 import { NextResponse } from "next/server";
+import { getExhibitorSession } from "@/lib/session";
 
 export async function GET() {
   const session = await getExhibitorSession();
@@ -12,7 +12,8 @@ export async function GET() {
   return NextResponse.json({
     exhibitor: {
       id: exhibitor.id,
-      name: exhibitor.name,
+      firstName: exhibitor.firstName,
+      lastName: exhibitor.lastName,
       username: exhibitor.username,
       phoneNumber: exhibitor.phoneNumber,
     },

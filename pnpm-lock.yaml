@@ -96,6 +96,9 @@ importers:
 
   apps/exhibitor:
     dependencies:
+      '@react-pdf/renderer':
+        specifier: 4.5.1
+        version: 4.5.1(react@19.2.8)
       '@repo/db':
         specifier: workspace:*
         version: link:../../packages/db

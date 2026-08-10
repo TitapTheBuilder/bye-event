@@ -1,11 +1,11 @@
 "use client";
 
+import Link from "next/link";
+import { useEffect, useState } from "react";
 import { ScanButton } from "@/components/ScanButton";
 import { useAuth } from "@/lib/client/auth-context";
 import { useTranslation } from "@/lib/client/language-context";
-import { useEffect, useState } from "react";
 import { getUnsyncedOutboxEntries } from "@/lib/offline/idb";
-import Link from "next/link";
 
 export default function HomePage() {
   const { exhibitor } = useAuth();
@@ -39,11 +39,9 @@ export default function HomePage() {
     <div className="flex min-h-[calc(100dvh-4rem-5rem)] flex-col items-center justify-center gap-8 px-6 text-center">
       <div>
         <h1 className="text-2xl font-semibold text-text-primary">
-          {exhibitor ? t("home.welcomeUser", { name: exhibitor.name.split(" ")[0] ?? exhibitor.name }) : t("home.scanToStart")}
+          {exhibitor ? t("home.welcomeUser", { name: exhibitor.firstName }) : t("home.scanToStart")}
         </h1>
-        <p className="mt-1 text-sm text-text-secondary">
-          {t("home.pointCamera")}
-        </p>
+        <p className="mt-1 text-sm text-text-secondary">{t("home.pointCamera")}</p>
       </div>
 
       <ScanButton />

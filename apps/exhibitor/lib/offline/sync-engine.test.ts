@@ -46,9 +46,9 @@ describe("SyncEngine", () => {
   });
 
   it("flushes queued entries once authenticated and online, marking them synced", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      jsonResponse({ results: [{ localId: "a", status: "synced" }] }),
-    );
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ results: [{ localId: "a", status: "synced" }] }));
     const engine = new SyncEngine(fetchMock as unknown as typeof fetch);
     await addOutboxEntry({ localId: "a", qrToken: "tok-1", scannedAt: new Date().toISOString() });
 
@@ -62,6 +62,31 @@ describe("SyncEngine", () => {
     const [entry] = await getAllOutboxEntries();
     expect(entry?.synced).toBe(true);
     expect(engine.getStatus()).toBe("idle");
+  });
+
+  it("drains a scan queued while another flush is in flight", async () => {
+    let resolveFirstResponse: ((response: Response) => void) | undefined;
+    const firstResponse = new Promise<Response>((resolve) => {
+      resolveFirstResponse = resolve;
+    });
+    const fetchMock = vi
+      .fn()
+      .mockImplementationOnce(() => firstResponse)
+      .mockResolvedValueOnce(jsonResponse({ results: [{ localId: "b", status: "synced" }] }));
+    const engine = new SyncEngine(fetchMock as unknown as typeof fetch);
+    await addOutboxEntry({ localId: "a", qrToken: "tok-1", scannedAt: new Date().toISOString() });
+
+    engine.setAuthenticated(true);
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+
+    await addOutboxEntry({ localId: "b", qrToken: "tok-2", scannedAt: new Date().toISOString() });
+    engine.requestFlush();
+    resolveFirstResponse?.(jsonResponse({ results: [{ localId: "a", status: "synced" }] }));
+
+    await vi.waitFor(async () => {
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect((await getAllOutboxEntries()).every((entry) => entry.synced)).toBe(true);
+    });
   });
 
   it("logging in flushes the ENTIRE outbox accumulated before login, not just new entries", async () => {
@@ -101,9 +126,9 @@ describe("SyncEngine", () => {
   });
 
   it("never sends anything while signed out, then flushes everything on login", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      jsonResponse({ results: [{ localId: "a", status: "synced" }] }),
-    );
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ results: [{ localId: "a", status: "synced" }] }));
     const engine = new SyncEngine(fetchMock as unknown as typeof fetch);
 
     await addOutboxEntry({ localId: "a", qrToken: "tok-1", scannedAt: new Date().toISOString() });
@@ -141,12 +166,13 @@ describe("SyncEngine", () => {
       initialBackoffMs: 20,
       maxBackoffMs: 100,
     });
+    engine.setAuthenticated(true);
+    await engine.flush();
     await addOutboxEntry({
       localId: "a",
       qrToken: "tok-1",
       scannedAt: new Date().toISOString(),
     });
-    engine.setAuthenticated(true);
 
     await engine.flush();
     expect(engine.getStatus()).toBe("error");
@@ -172,8 +198,9 @@ describe("SyncEngine", () => {
       }),
     );
     const engine = new SyncEngine(fetchMock as unknown as typeof fetch);
-    await addOutboxEntry({ localId: "a", qrToken: "tok-bad", scannedAt: new Date().toISOString() });
     engine.setAuthenticated(true);
+    await engine.flush();
+    await addOutboxEntry({ localId: "a", qrToken: "tok-bad", scannedAt: new Date().toISOString() });
 
     await engine.flush();
     expect(engine.getStatus()).toBe("error");
@@ -195,15 +222,14 @@ describe("SyncEngine", () => {
           ],
         }),
       )
-      .mockResolvedValueOnce(
-        jsonResponse({ results: [{ localId: "a", status: "synced" }] }),
-      );
+      .mockResolvedValueOnce(jsonResponse({ results: [{ localId: "a", status: "synced" }] }));
     const engine = new SyncEngine(fetchMock as unknown as typeof fetch, {
       initialBackoffMs: 20,
       maxBackoffMs: 100,
     });
-    await addOutboxEntry({ localId: "a", qrToken: "tok-1", scannedAt: new Date().toISOString() });
     engine.setAuthenticated(true);
+    await engine.flush();
+    await addOutboxEntry({ localId: "a", qrToken: "tok-1", scannedAt: new Date().toISOString() });
 
     await engine.flush();
     expect(engine.getStatus()).toBe("error");
@@ -218,9 +244,9 @@ describe("SyncEngine", () => {
     await addOutboxEntry({ localId: "a", qrToken: "tok-1", scannedAt: new Date().toISOString() });
     const { markOutboxEntryError } = await import("./idb");
     await markOutboxEntryError("a", "Visitor not found", true);
-    const fetchMock = vi.fn().mockResolvedValue(
-      jsonResponse({ results: [{ localId: "a", status: "synced" }] }),
-    );
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ results: [{ localId: "a", status: "synced" }] }));
     const engine = new SyncEngine(fetchMock as unknown as typeof fetch);
 
     engine.setAuthenticated(true);
@@ -232,9 +258,9 @@ describe("SyncEngine", () => {
   });
 
   it("notifies subscribers of status and pending-count changes", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      jsonResponse({ results: [{ localId: "a", status: "synced" }] }),
-    );
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ results: [{ localId: "a", status: "synced" }] }));
     const engine = new SyncEngine(fetchMock as unknown as typeof fetch);
     const updates: { status: string; pendingCount: number }[] = [];
     engine.subscribe((state) => updates.push(state));
@@ -248,9 +274,9 @@ describe("SyncEngine", () => {
   });
 
   it("is idempotent-safe: flushing the same already-synced entries again is a no-op", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      jsonResponse({ results: [{ localId: "a", status: "synced" }] }),
-    );
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ results: [{ localId: "a", status: "synced" }] }));
     const engine = new SyncEngine(fetchMock as unknown as typeof fetch);
     await addOutboxEntry({ localId: "a", qrToken: "tok-1", scannedAt: new Date().toISOString() });
     engine.setAuthenticated(true);

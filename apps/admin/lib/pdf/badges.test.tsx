@@ -8,7 +8,8 @@ import { formatGuestBadgeLabel, generateBadgePdf } from "./badges";
 const visitor: Visitor = {
   id: "019c0000-0000-7000-8000-000000000001",
   qrToken: "persian-pdf-test-token",
-  name: "علی رضایی",
+  firstName: "علی",
+  lastName: "رضایی",
   company: "شرکت فناوری تهران",
   phoneNumber: null,
   email: null,
@@ -51,14 +52,16 @@ describe("generateBadgePdf", () => {
         ...visitor,
         id: "019c0000-0000-7000-8000-000000000002",
         visitorType: "guest",
-        name: null,
+        firstName: null,
+        lastName: null,
         company: null,
       },
       {
         ...visitor,
         id: "019c0000-0000-7000-8000-000000000003",
         visitorType: "guest",
-        name: null,
+        firstName: null,
+        lastName: null,
         company: null,
       },
     ];

@@ -1,9 +1,9 @@
 import { createExhibitor, db, getExhibitorByUsername } from "@repo/db";
 import { hashPassword } from "@repo/shared/auth";
 import { exhibitorSignupSchema } from "@repo/shared/schemas";
+import { NextResponse } from "next/server";
 import { forbiddenOrigin, isSameOriginRequest } from "@/lib/http";
 import { createExhibitorSession } from "@/lib/session";
-import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   if (!isSameOriginRequest(request)) return forbiddenOrigin();
@@ -11,12 +11,15 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = exhibitorSignupSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid input", issues: parsed.error.issues }, {
-      status: 400,
-    });
+    return NextResponse.json(
+      { error: "Invalid input", issues: parsed.error.issues },
+      {
+        status: 400,
+      },
+    );
   }
 
-  const { name, username, phoneNumber, password } = parsed.data;
+  const { firstName, lastName, username, phoneNumber, password } = parsed.data;
 
   const existing = await getExhibitorByUsername(db, username);
   if (existing) {
@@ -27,7 +30,13 @@ export async function POST(request: Request) {
 
   let exhibitor: Awaited<ReturnType<typeof createExhibitor>>;
   try {
-    exhibitor = await createExhibitor(db, { name, username, phoneNumber, passwordHash });
+    exhibitor = await createExhibitor(db, {
+      firstName,
+      lastName,
+      username,
+      phoneNumber,
+      passwordHash,
+    });
   } catch {
     // Most likely the phone_number unique constraint.
     return NextResponse.json(
@@ -39,7 +48,15 @@ export async function POST(request: Request) {
   await createExhibitorSession(exhibitor.id);
 
   return NextResponse.json(
-    { exhibitor: { id: exhibitor.id, name: exhibitor.name, username: exhibitor.username } },
+    {
+      exhibitor: {
+        id: exhibitor.id,
+        firstName: exhibitor.firstName,
+        lastName: exhibitor.lastName,
+        username: exhibitor.username,
+        phoneNumber: exhibitor.phoneNumber,
+      },
+    },
     { status: 201 },
   );
 }

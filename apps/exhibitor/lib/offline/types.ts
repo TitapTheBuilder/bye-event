@@ -1,6 +1,7 @@
 export interface CachedVisitor {
   qrToken: string;
-  name: string | null;
+  firstName: string | null;
+  lastName: string | null;
   company: string | null;
   phoneNumber: string | null;
   email: string | null;

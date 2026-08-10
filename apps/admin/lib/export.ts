@@ -1,4 +1,4 @@
-import type { Exhibitor, Visitor, VisitExportRow } from "@repo/db";
+import type { Exhibitor, VisitExportRow, Visitor } from "@repo/db";
 import type { ExportEntity, ExportFormat } from "@repo/shared/schemas";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
@@ -20,7 +20,8 @@ function visitorsToRows(visitors: Visitor[]): ExportRow[] {
   return visitors.map((v) => ({
     id: v.id,
     qrToken: v.qrToken,
-    name: v.name,
+    firstName: v.firstName,
+    lastName: v.lastName,
     company: v.company,
     phoneNumber: v.phoneNumber,
     email: v.email,
@@ -33,7 +34,8 @@ function visitorsToRows(visitors: Visitor[]): ExportRow[] {
 function exhibitorsToRows(exhibitors: Exhibitor[]): ExportRow[] {
   return exhibitors.map((e) => ({
     id: e.id,
-    name: e.name,
+    firstName: e.firstName,
+    lastName: e.lastName,
     username: e.username,
     phoneNumber: e.phoneNumber,
     deactivatedAt: isoOrNull(e.deactivatedAt),
@@ -44,9 +46,11 @@ function exhibitorsToRows(exhibitors: Exhibitor[]): ExportRow[] {
 function visitsToRows(rows: VisitExportRow[]): ExportRow[] {
   return rows.map((r) => ({
     exhibitorId: r.exhibitorId,
-    exhibitorName: r.exhibitorName,
+    exhibitorFirstName: r.exhibitorFirstName,
+    exhibitorLastName: r.exhibitorLastName,
     visitorId: r.visitorId,
-    visitorName: r.visitorName,
+    visitorFirstName: r.visitorFirstName,
+    visitorLastName: r.visitorLastName,
     visitorCompany: r.visitorCompany,
     visitorType: r.visitorType,
     scanCount: r.scanCount,

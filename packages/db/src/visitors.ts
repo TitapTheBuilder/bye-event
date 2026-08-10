@@ -1,10 +1,11 @@
-import { and, asc, desc, eq, ilike, inArray, isNull, or, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, isNull, or, type SQL, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import type { Database } from "./client";
 import { type NewVisitor, type Visitor, visitors } from "./schema";
 
 export interface CreateVisitorInput {
-  name?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
   company?: string | null;
   phoneNumber?: string | null;
   email?: string | null;
@@ -37,7 +38,8 @@ export async function createVisitorsBulk(
 ): Promise<Visitor[]> {
   if (inputs.length === 0) return [];
   const values: NewVisitor[] = inputs.map((input) => ({
-    name: input.name?.trim() || null,
+    firstName: input.firstName?.trim() || null,
+    lastName: input.lastName?.trim() || null,
     company: input.company?.trim() || null,
     phoneNumber: input.phoneNumber?.trim() || null,
     email: input.email?.trim() || null,
@@ -73,7 +75,8 @@ export async function getVisitorById(db: Database, id: string): Promise<Visitor 
 }
 
 export interface UpdateVisitorInput {
-  name?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
   company?: string | null;
   phoneNumber?: string | null;
   email?: string | null;
@@ -85,9 +88,18 @@ export async function updateVisitor(
   id: string,
   input: UpdateVisitorInput,
 ): Promise<Visitor | undefined> {
+  const normalize = (value: string | null | undefined) =>
+    value === undefined ? undefined : value?.trim() || null;
   const [row] = await db
     .update(visitors)
-    .set(input)
+    .set({
+      ...input,
+      firstName: normalize(input.firstName),
+      lastName: normalize(input.lastName),
+      company: normalize(input.company),
+      phoneNumber: normalize(input.phoneNumber),
+      email: normalize(input.email),
+    })
     .where(eq(visitors.id, id))
     .returning();
   return row;
@@ -108,7 +120,7 @@ export interface ListVisitorsOptions {
   includeDeactivated?: boolean;
   limit?: number;
   offset?: number;
-  sortBy?: "createdAt" | "name" | "company";
+  sortBy?: "createdAt" | "firstName" | "lastName" | "company";
   sortDir?: "asc" | "desc";
 }
 
@@ -129,7 +141,8 @@ export async function listVisitors(db: Database, options: ListVisitorsOptions = 
   if (search) {
     const like = `%${search}%`;
     const searchCondition = or(
-      ilike(visitors.name, like),
+      ilike(visitors.firstName, like),
+      ilike(visitors.lastName, like),
       ilike(visitors.company, like),
       ilike(visitors.email, like),
       ilike(visitors.phoneNumber, like),
@@ -186,7 +199,8 @@ export async function countVisitors(
   if (search) {
     const like = `%${search}%`;
     const searchCondition = or(
-      ilike(visitors.name, like),
+      ilike(visitors.firstName, like),
+      ilike(visitors.lastName, like),
       ilike(visitors.company, like),
       ilike(visitors.email, like),
       ilike(visitors.phoneNumber, like),

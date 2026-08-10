@@ -16,7 +16,8 @@ export interface ScannedListItem {
   qrToken: string;
   visitorId?: string;
   localId?: string;
-  name: string | null;
+  firstName: string | null;
+  lastName: string | null;
   company: string | null;
   phoneNumber: string | null;
   email: string | null;
@@ -27,7 +28,8 @@ export interface ScannedListItem {
 
 interface ServerVisitRow {
   visitorId: string;
-  name: string | null;
+  firstName: string | null;
+  lastName: string | null;
   company: string | null;
   phoneNumber: string | null;
   email: string | null;
@@ -61,7 +63,8 @@ export function useScannedList() {
                 key: row.visitorId,
                 qrToken: row.qrToken,
                 visitorId: row.visitorId,
-                name: row.name,
+                firstName: row.firstName,
+                lastName: row.lastName,
                 company: row.company,
                 phoneNumber: row.phoneNumber,
                 email: row.email,
@@ -80,10 +83,7 @@ export function useScannedList() {
       // Always fold in local outbox entries not yet reflected server-side
       // (or all of them, when signed out/offline) -- scans made seconds
       // ago must show up immediately, not just after a successful sync.
-      const outbox = getLatestOutboxEntriesByQrToken(
-        await getAllOutboxEntries(),
-        seenQrTokens,
-      );
+      const outbox = getLatestOutboxEntriesByQrToken(await getAllOutboxEntries(), seenQrTokens);
       for (const entry of outbox) {
         const qrToken = entry.qrToken.trim();
         seenQrTokens.add(qrToken);
@@ -94,7 +94,8 @@ export function useScannedList() {
           key: `local:${entry.localId}`,
           qrToken,
           localId: entry.localId,
-          name: cached?.name ?? null,
+          firstName: cached?.firstName ?? null,
+          lastName: cached?.lastName ?? null,
           company: cached?.company ?? null,
           phoneNumber: cached?.phoneNumber ?? null,
           email: cached?.email ?? null,
@@ -106,7 +107,8 @@ export function useScannedList() {
 
       const filtered = search
         ? merged.filter((item) => {
-            const haystack = `${item.name ?? ""} ${item.company ?? ""}`.toLowerCase();
+            const haystack =
+              `${item.firstName ?? ""} ${item.lastName ?? ""} ${item.company ?? ""}`.toLowerCase();
             return haystack.includes(search.toLowerCase());
           })
         : merged;

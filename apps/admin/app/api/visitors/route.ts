@@ -1,8 +1,8 @@
-import { countVisitors, createVisitor, db, listVisitors, type ListVisitorsOptions } from "@repo/db";
+import { countVisitors, createVisitor, db, type ListVisitorsOptions, listVisitors } from "@repo/db";
 import { visitorCreateSchema } from "@repo/shared/schemas";
+import { NextResponse } from "next/server";
 import { forbiddenOrigin, isSameOriginRequest, unauthorized } from "@/lib/http";
 import { requireAdminSession, UnauthorizedError } from "@/lib/session";
-import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
   try {
@@ -15,12 +15,16 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const search = searchParams.get("q") ?? undefined;
   const visitorTypeParam = searchParams.get("visitorType");
-  const visitorType = visitorTypeParam === "invited" || visitorTypeParam === "guest" ? visitorTypeParam : undefined;
+  const visitorType =
+    visitorTypeParam === "invited" || visitorTypeParam === "guest" ? visitorTypeParam : undefined;
   const includeDeactivated = searchParams.get("includeDeactivated") === "true";
   const page = Math.max(1, Number(searchParams.get("page") ?? "1") || 1);
   const pageSize = Math.min(200, Math.max(1, Number(searchParams.get("pageSize") ?? "25") || 25));
   const sortByParam = searchParams.get("sortBy");
-  const sortBy = sortByParam === "name" || sortByParam === "company" ? sortByParam : "createdAt";
+  const sortBy =
+    sortByParam === "firstName" || sortByParam === "lastName" || sortByParam === "company"
+      ? sortByParam
+      : "createdAt";
   const sortDir = searchParams.get("sortDir") === "asc" ? "asc" : "desc";
 
   const options: Pick<
@@ -51,7 +55,10 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = visitorCreateSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid input", issues: parsed.error.issues }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid input", issues: parsed.error.issues },
+      { status: 400 },
+    );
   }
 
   const visitor = await createVisitor(db, parsed.data);

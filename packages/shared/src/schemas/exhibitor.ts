@@ -1,9 +1,6 @@
 import { z } from "zod";
 
-const passwordSchema = z
-  .string()
-  .min(8, "Password must be at least 8 characters")
-  .max(200);
+const passwordSchema = z.string().min(8, "Password must be at least 8 characters").max(200);
 
 const phoneNumberSchema = z
   .string()
@@ -13,7 +10,8 @@ const phoneNumberSchema = z
   .regex(/^[+\d][\d\s-]*$/, "Enter a valid phone number");
 
 export const exhibitorSignupSchema = z.object({
-  name: z.string().trim().min(1, "Name is required").max(200),
+  firstName: z.string().trim().min(1, "First name is required").max(200),
+  lastName: z.string().trim().min(1, "Last name is required").max(200),
   username: z
     .string()
     .trim()

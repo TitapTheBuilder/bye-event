@@ -1,9 +1,10 @@
 "use client";
 
+import { formatPersonName } from "@repo/shared/person-name";
+import { useEffect, useState } from "react";
 import { DashboardVisitorsTable } from "@/components/DashboardVisitorsTable";
 import { LeaderboardChart } from "@/components/LeaderboardChart";
 import { useTranslation } from "@/lib/client/language-context";
-import { useEffect, useState } from "react";
 
 interface DashboardSummary {
   totalVisitors: number;
@@ -15,7 +16,8 @@ interface DashboardSummary {
 
 interface LeaderboardRow {
   exhibitorId: string;
-  exhibitorName: string;
+  exhibitorFirstName: string;
+  exhibitorLastName: string;
   totalVisits: number;
   totalScans: number;
 }
@@ -54,7 +56,10 @@ export default function DashboardPage() {
   const topLeaderboard = leaderboard
     .filter((row) => row.totalScans > 0)
     .slice(0, 8)
-    .map((row) => ({ exhibitorName: row.exhibitorName, totalScans: row.totalScans }));
+    .map((row) => ({
+      exhibitorName: formatPersonName(row.exhibitorFirstName, row.exhibitorLastName),
+      totalScans: row.totalScans,
+    }));
 
   return (
     <div className="flex flex-col gap-8">

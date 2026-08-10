@@ -1,10 +1,11 @@
 "use client";
 
-import { StatusPill } from "@/components/StatusPill";
-import { useToast } from "@/lib/client/toast";
-import { useTranslation } from "@/lib/client/language-context";
 import type { Exhibitor } from "@repo/db";
+import { formatPersonName } from "@repo/shared/person-name";
 import { useCallback, useEffect, useState } from "react";
+import { StatusPill } from "@/components/StatusPill";
+import { useTranslation } from "@/lib/client/language-context";
+import { useToast } from "@/lib/client/toast";
 
 export default function ExhibitorsPage() {
   const { t, dir } = useTranslation();
@@ -41,7 +42,9 @@ export default function ExhibitorsPage() {
 
     if (wasActive) {
       showToast({
-        message: t("exhibitors.deactivated", { name: exhibitor.name }),
+        message: t("exhibitors.deactivated", {
+          name: formatPersonName(exhibitor.firstName, exhibitor.lastName),
+        }),
         actionLabel: t("common.undo"),
         onAction: async () => {
           await fetch(`/api/exhibitors/${exhibitor.id}`, {
@@ -59,9 +62,7 @@ export default function ExhibitorsPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-xl font-semibold text-text-primary">{t("exhibitors.title")}</h1>
-        <p className="text-sm text-text-secondary">
-          {t("exhibitors.subtitle")}
-        </p>
+        <p className="text-sm text-text-secondary">{t("exhibitors.subtitle")}</p>
       </div>
 
       <label className="flex w-fit items-center gap-2 text-sm text-text-secondary">
@@ -78,31 +79,35 @@ export default function ExhibitorsPage() {
         <table className={`w-full min-w-[640px] text-sm text-${dir === "rtl" ? "end" : "start"}`}>
           <thead className="border-b border-border-subtle text-text-secondary">
             <tr>
-              <th className="px-4 py-3">{t("exhibitors.name")}</th>
+              <th className="px-4 py-3">{t("exhibitors.firstName")}</th>
+              <th className="px-4 py-3">{t("exhibitors.lastName")}</th>
               <th className="px-4 py-3">{t("exhibitors.username")}</th>
               <th className="px-4 py-3">{t("exhibitors.phone")}</th>
               <th className="px-4 py-3">{t("exhibitors.status")}</th>
               <th className="px-4 py-3">{t("exhibitors.joined")}</th>
-              <th className={`px-4 py-3 text-${dir === "rtl" ? "start" : "end"}`}>{t("exhibitors.actions")}</th>
+              <th className={`px-4 py-3 text-${dir === "rtl" ? "start" : "end"}`}>
+                {t("exhibitors.actions")}
+              </th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-text-secondary">
+                <td colSpan={7} className="px-4 py-8 text-center text-text-secondary">
                   {t("common.loading")}
                 </td>
               </tr>
             ) : exhibitors.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-text-secondary">
+                <td colSpan={7} className="px-4 py-8 text-center text-text-secondary">
                   {t("exhibitors.noExhibitors")}
                 </td>
               </tr>
             ) : (
               exhibitors.map((exhibitor) => (
                 <tr key={exhibitor.id} className="border-b border-border-subtle last:border-0">
-                  <td className="px-4 py-3 text-text-primary">{exhibitor.name}</td>
+                  <td className="px-4 py-3 text-text-primary">{exhibitor.firstName}</td>
+                  <td className="px-4 py-3 text-text-primary">{exhibitor.lastName}</td>
                   <td className="px-4 py-3 text-text-secondary">@{exhibitor.username}</td>
                   <td className="px-4 py-3 text-text-secondary">{exhibitor.phoneNumber}</td>
                   <td className="px-4 py-3">
@@ -122,7 +127,9 @@ export default function ExhibitorsPage() {
                             : "border-danger/40 text-danger hover:bg-danger/10"
                         }`}
                       >
-                        {exhibitor.deactivatedAt ? t("visitors.reactivate") : t("visitors.deactivate")}
+                        {exhibitor.deactivatedAt
+                          ? t("visitors.reactivate")
+                          : t("visitors.deactivate")}
                       </button>
                     </div>
                   </td>

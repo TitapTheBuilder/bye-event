@@ -1,12 +1,13 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { clearLocalScannerData } from "@/lib/offline/idb";
+import { clearScannerDataAfterLogout } from "@/lib/offline/idb";
 import { registerSyncTriggers, syncEngine } from "@/lib/offline/sync-engine";
 
 export interface ExhibitorProfile {
   id: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   username: string;
   phoneNumber: string;
 }
@@ -15,9 +16,13 @@ interface AuthContextValue {
   exhibitor: ExhibitorProfile | null;
   /** True until the initial /api/auth/me check resolves. */
   isLoading: boolean;
-  login: (username: string, password: string) => Promise<{ ok: true } | { ok: false; error: string }>;
+  login: (
+    username: string,
+    password: string,
+  ) => Promise<{ ok: true } | { ok: false; error: string }>;
   signup: (input: {
-    name: string;
+    firstName: string;
+    lastName: string;
     username: string;
     phoneNumber: string;
     password: string;
@@ -69,7 +74,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signup = useCallback(
-    async (input: { name: string; username: string; phoneNumber: string; password: string }) => {
+    async (input: {
+      firstName: string;
+      lastName: string;
+      username: string;
+      phoneNumber: string;
+      password: string;
+    }) => {
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -85,13 +96,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const logout = useCallback(async () => {
-    // Give pending scans one final chance to reach the server while the
-    // current exhibitor session still exists. Local data is then removed for
-    // privacy even if some entries could not sync while offline.
+    // Give pending scans one final chance while the session still exists.
+    // Any entries that remain unsynced are preserved for a later retry.
     await syncEngine.flush();
     await fetch("/api/auth/logout", { method: "POST" });
     syncEngine.setAuthenticated(false);
-    await clearLocalScannerData();
+    await clearScannerDataAfterLogout();
     setExhibitor(null);
   }, []);
 

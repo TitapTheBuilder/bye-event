@@ -1,26 +1,30 @@
 import "dotenv/config";
 import { hashPassword } from "@repo/shared/auth";
-import { createExhibitor, getExhibitorByUsername } from "./exhibitors";
 import { db } from "./client";
+import { createExhibitor, getExhibitorByUsername } from "./exhibitors";
 
 /**
  * Creates a new exhibitor user account.
  * This is intended for production/operational use to provision exhibitor
  * accounts since they may not be able to self-register.
- * 
+ *
  * Usage:
- *   EXHIBITOR_NAME="Tech Corp" EXHIBITOR_USERNAME="techcorp" \
- *   EXHIBITOR_PASSWORD="securepassword" EXHIBITOR_PHONE="+1234567890" \
+ *   EXHIBITOR_FIRST_NAME="Jane" EXHIBITOR_LAST_NAME="Doe" \
+ *   EXHIBITOR_USERNAME="janedoe" EXHIBITOR_PASSWORD="securepassword" \
+ *   EXHIBITOR_PHONE="+1234567890" \
  *   pnpm --filter @repo/db create-exhibitor
  */
 async function main() {
-  const name = process.env.EXHIBITOR_NAME;
+  const firstName = process.env.EXHIBITOR_FIRST_NAME;
+  const lastName = process.env.EXHIBITOR_LAST_NAME;
   const username = process.env.EXHIBITOR_USERNAME;
   const password = process.env.EXHIBITOR_PASSWORD;
   const phoneNumber = process.env.EXHIBITOR_PHONE ?? "";
 
-  if (!name || !username || !password) {
-    console.error("EXHIBITOR_NAME, EXHIBITOR_USERNAME, and EXHIBITOR_PASSWORD env vars are required.");
+  if (!firstName || !lastName || !username || !password) {
+    console.error(
+      "EXHIBITOR_FIRST_NAME, EXHIBITOR_LAST_NAME, EXHIBITOR_USERNAME, and EXHIBITOR_PASSWORD are required.",
+    );
     process.exit(1);
   }
 
@@ -31,7 +35,13 @@ async function main() {
   }
 
   const passwordHash = await hashPassword(password);
-  const exhibitor = await createExhibitor(db, { name, username, phoneNumber, passwordHash });
+  const exhibitor = await createExhibitor(db, {
+    firstName,
+    lastName,
+    username,
+    phoneNumber,
+    passwordHash,
+  });
   console.log(`Created exhibitor ${exhibitor.username} (${exhibitor.id}).`);
   process.exit(0);
 }

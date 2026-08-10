@@ -1,9 +1,10 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { eq, isNull } from "drizzle-orm";
 import type { Database } from "./client";
 import { type Exhibitor, exhibitors } from "./schema";
 
 export interface CreateExhibitorInput {
-  name: string;
+  firstName: string;
+  lastName: string;
   username: string;
   phoneNumber: string;
   /** Argon2id hash -- callers must hash the password before reaching here. */
@@ -14,7 +15,10 @@ export async function createExhibitor(
   db: Database,
   input: CreateExhibitorInput,
 ): Promise<Exhibitor> {
-  const [row] = await db.insert(exhibitors).values(input).returning();
+  const [row] = await db
+    .insert(exhibitors)
+    .values({ ...input, firstName: input.firstName.trim(), lastName: input.lastName.trim() })
+    .returning();
   if (!row) throw new Error("Failed to create exhibitor");
   return row;
 }
@@ -31,10 +35,7 @@ export async function getExhibitorByUsername(
   return row;
 }
 
-export async function getExhibitorById(
-  db: Database,
-  id: string,
-): Promise<Exhibitor | undefined> {
+export async function getExhibitorById(db: Database, id: string): Promise<Exhibitor | undefined> {
   const [row] = await db.select().from(exhibitors).where(eq(exhibitors.id, id)).limit(1);
   return row;
 }

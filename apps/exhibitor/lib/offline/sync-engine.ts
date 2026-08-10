@@ -28,6 +28,7 @@ export class SyncEngine {
   private listeners = new Set<Listener>();
   private status: SyncStatus = "idle";
   private inFlightFlush: Promise<void> | null = null;
+  private flushRequested = false;
   private isAuthenticated = false;
   private backoffMs: number;
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -79,6 +80,7 @@ export class SyncEngine {
 
   /** Fire-and-forget trigger, safe to call as often as you like. */
   requestFlush(): void {
+    this.flushRequested = true;
     void this.flush();
   }
 
@@ -92,10 +94,19 @@ export class SyncEngine {
    */
   async flush(): Promise<void> {
     if (this.inFlightFlush) return this.inFlightFlush;
-    this.inFlightFlush = this.doFlush().finally(() => {
+    this.flushRequested = true;
+    this.inFlightFlush = this.drainFlushRequests().finally(() => {
       this.inFlightFlush = null;
+      if (this.flushRequested) this.requestFlush();
     });
     return this.inFlightFlush;
+  }
+
+  private async drainFlushRequests(): Promise<void> {
+    while (this.flushRequested) {
+      this.flushRequested = false;
+      await this.doFlush();
+    }
   }
 
   private async doFlush(): Promise<void> {
@@ -113,7 +124,8 @@ export class SyncEngine {
       const entries = await getSyncableOutboxEntries();
       if (entries.length === 0) {
         this.clearRetryTimer();
-        await this.setStatus("idle");
+        const remaining = await getUnsyncedOutboxEntries();
+        await this.setStatus(remaining.length > 0 ? "error" : "idle");
         return;
       }
 

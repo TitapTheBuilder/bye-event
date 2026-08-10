@@ -18,7 +18,7 @@ interface ExhibitionSchema extends DBSchema {
 }
 
 const DB_NAME = "exhibition-scanner";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let dbPromise: Promise<IDBPDatabase<ExhibitionSchema>> | null = null;
 
@@ -50,7 +50,20 @@ export async function cacheVisitor(visitor: Omit<CachedVisitor, "cachedAt">): Pr
 
 export async function getCachedVisitor(qrToken: string): Promise<CachedVisitor | undefined> {
   const db = await getDb();
-  return db.get("visitorCache", qrToken);
+  const cached = (await db.get("visitorCache", qrToken)) as
+    | (CachedVisitor & { name?: string })
+    | undefined;
+  if (!cached) return undefined;
+  if (cached.firstName !== undefined && cached.lastName !== undefined) return cached;
+
+  const { name, ...rest } = cached;
+  const migrated: CachedVisitor = {
+    ...rest,
+    firstName: name?.trim() || null,
+    lastName: null,
+  };
+  await db.put("visitorCache", migrated);
+  return migrated;
 }
 
 export async function removeCachedVisitor(qrToken: string): Promise<void> {
@@ -171,14 +184,29 @@ export async function getOutboxEntryByQrToken(qrToken: string): Promise<OutboxEn
 }
 
 /**
- * Clears all visitor details and scan events held on this device. Call this
- * after logout so one exhibitor's local history cannot be exposed to the
- * next account using the same phone.
+ * Clears cached visitor PII and already-synced history on logout while
+ * preserving unsynced scans so a temporary sync failure cannot lose data.
  */
+export async function clearScannerDataAfterLogout(): Promise<void> {
+  const db = await getDb();
+  const tx = db.transaction(["visitorCache", "visitOutbox"], "readwrite");
+  await tx.objectStore("visitorCache").clear();
+  let cursor = await tx.objectStore("visitOutbox").openCursor();
+  while (cursor) {
+    if (cursor.value.synced) await cursor.delete();
+    cursor = await cursor.continue();
+  }
+  await tx.done;
+}
+
+/** Clears every local record; reserved for explicit resets and tests. */
 export async function clearLocalScannerData(): Promise<void> {
   const db = await getDb();
   const tx = db.transaction(["visitorCache", "visitOutbox"], "readwrite");
-  await Promise.all([tx.objectStore("visitorCache").clear(), tx.objectStore("visitOutbox").clear()]);
+  await Promise.all([
+    tx.objectStore("visitorCache").clear(),
+    tx.objectStore("visitOutbox").clear(),
+  ]);
   await tx.done;
 }
 

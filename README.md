@@ -47,7 +47,7 @@ ADMIN_NAME="Admin" ADMIN_EMAIL="admin@example.com" ADMIN_PASSWORD="password" pnp
 
 **Create an Exhibitor:**
 ```bash
-EXHIBITOR_NAME="Tech Corp" EXHIBITOR_USERNAME="tech" EXHIBITOR_PASSWORD="password" pnpm --filter @repo/db create-exhibitor
+EXHIBITOR_FIRST_NAME="Jane" EXHIBITOR_LAST_NAME="Doe" EXHIBITOR_USERNAME="tech" EXHIBITOR_PASSWORD="password" pnpm --filter @repo/db create-exhibitor
 ```
 
 ---

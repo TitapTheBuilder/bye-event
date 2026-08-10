@@ -1,9 +1,9 @@
 import { db, getExhibitorByUsername } from "@repo/db";
 import { verifyPassword } from "@repo/shared/auth";
 import { exhibitorLoginSchema } from "@repo/shared/schemas";
+import { NextResponse } from "next/server";
 import { forbiddenOrigin, isSameOriginRequest } from "@/lib/http";
 import { createExhibitorSession } from "@/lib/session";
-import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   if (!isSameOriginRequest(request)) return forbiddenOrigin();
@@ -11,9 +11,12 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = exhibitorLoginSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid input", issues: parsed.error.issues }, {
-      status: 400,
-    });
+    return NextResponse.json(
+      { error: "Invalid input", issues: parsed.error.issues },
+      {
+        status: 400,
+      },
+    );
   }
 
   const { username, password } = parsed.data;
@@ -32,6 +35,12 @@ export async function POST(request: Request) {
   await createExhibitorSession(exhibitor.id);
 
   return NextResponse.json({
-    exhibitor: { id: exhibitor.id, name: exhibitor.name, username: exhibitor.username },
+    exhibitor: {
+      id: exhibitor.id,
+      firstName: exhibitor.firstName,
+      lastName: exhibitor.lastName,
+      username: exhibitor.username,
+      phoneNumber: exhibitor.phoneNumber,
+    },
   });
 }

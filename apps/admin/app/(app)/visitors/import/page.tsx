@@ -1,15 +1,21 @@
 "use client";
 
-import { buttonPrimaryClassName, buttonSecondaryClassName } from "@/components/FormField";
-import { useTranslation } from "@/lib/client/language-context";
 import Link from "next/link";
 import { useRef, useState } from "react";
+import { buttonPrimaryClassName, buttonSecondaryClassName } from "@/components/FormField";
+import { useTranslation } from "@/lib/client/language-context";
 
 interface ImportRowResult {
   rowNumber: number;
   raw: Record<string, unknown>;
   valid: boolean;
-  data?: { name?: string; company?: string; phoneNumber?: string; email?: string };
+  data?: {
+    firstName?: string;
+    lastName?: string;
+    company?: string;
+    phoneNumber?: string;
+    email?: string;
+  };
   errors?: string[];
 }
 
@@ -86,9 +92,7 @@ export default function ImportVisitorsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-text-primary">{t("import.title")}</h1>
-          <p className="text-sm text-text-secondary">
-            {t("import.subtitle")}
-          </p>
+          <p className="text-sm text-text-secondary">{t("import.subtitle")}</p>
         </div>
         <Link href="/visitors" className={buttonSecondaryClassName}>
           {t("import.backToVisitors")}
@@ -103,10 +107,12 @@ export default function ImportVisitorsPage() {
           onChange={handleFileChange}
           className="mx-auto block text-sm text-text-secondary file:mr-4 file:rounded-lg file:border-0 file:bg-surface-3 file:px-4 file:py-2 file:text-sm file:font-medium file:text-text-primary"
         />
-        <p className="mt-3 text-xs text-text-muted">
-          {t("import.expectedColumns")}
-        </p>
-        {isUploading ? <p className="mt-3 text-sm text-text-secondary">{t("import.parsing", { name: fileName ?? "" })}</p> : null}
+        <p className="mt-3 text-xs text-text-muted">{t("import.expectedColumns")}</p>
+        {isUploading ? (
+          <p className="mt-3 text-sm text-text-secondary">
+            {t("import.parsing", { name: fileName ?? "" })}
+          </p>
+        ) : null}
       </div>
 
       {error ? <p className="text-sm text-danger">{error}</p> : null}
@@ -121,9 +127,13 @@ export default function ImportVisitorsPage() {
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-text-secondary">
-              <span className="font-medium text-success">{t("import.valid", { count: preview.validCount.toString() })}</span>
+              <span className="font-medium text-success">
+                {t("import.valid", { count: preview.validCount.toString() })}
+              </span>
               {" · "}
-              <span className="font-medium text-danger">{t("import.invalid", { count: preview.invalidCount.toString() })}</span>
+              <span className="font-medium text-danger">
+                {t("import.invalid", { count: preview.invalidCount.toString() })}
+              </span>
               {" · "}
               {t("import.totalRows", { count: preview.rows.length.toString() })}
             </p>
@@ -134,16 +144,21 @@ export default function ImportVisitorsPage() {
               className={buttonPrimaryClassName}
               style={{ background: "var(--brand-gradient)" }}
             >
-              {isCommitting ? t("import.importing") : t("import.importButton", { count: preview.validCount.toString() })}
+              {isCommitting
+                ? t("import.importing")
+                : t("import.importButton", { count: preview.validCount.toString() })}
             </button>
           </div>
 
           <div className="max-h-[28rem] overflow-auto rounded-2xl border border-border-subtle bg-surface-1">
-            <table className={`w-full min-w-[720px] text-sm text-${dir === "rtl" ? "end" : "start"}`}>
+            <table
+              className={`w-full min-w-[720px] text-sm text-${dir === "rtl" ? "end" : "start"}`}
+            >
               <thead className="sticky top-0 border-b border-border-subtle bg-surface-1 text-text-secondary">
                 <tr>
                   <th className="px-4 py-3">{t("import.row")}</th>
-                  <th className="px-4 py-3">{t("import.name")}</th>
+                  <th className="px-4 py-3">{t("import.firstName")}</th>
+                  <th className="px-4 py-3">{t("import.lastName")}</th>
                   <th className="px-4 py-3">{t("import.company")}</th>
                   <th className="px-4 py-3">{t("import.phone")}</th>
                   <th className="px-4 py-3">{t("import.email")}</th>
@@ -159,13 +174,18 @@ export default function ImportVisitorsPage() {
                     }`}
                   >
                     <td className="px-4 py-2 text-text-muted">{row.rowNumber}</td>
-                    <td className="px-4 py-2 text-text-primary">{row.data?.name ?? "—"}</td>
+                    <td className="px-4 py-2 text-text-primary">{row.data?.firstName ?? "—"}</td>
+                    <td className="px-4 py-2 text-text-primary">{row.data?.lastName ?? "—"}</td>
                     <td className="px-4 py-2 text-text-secondary">{row.data?.company ?? "—"}</td>
-                    <td className="px-4 py-2 text-text-secondary">{row.data?.phoneNumber ?? "—"}</td>
+                    <td className="px-4 py-2 text-text-secondary">
+                      {row.data?.phoneNumber ?? "—"}
+                    </td>
                     <td className="px-4 py-2 text-text-secondary">{row.data?.email ?? "—"}</td>
                     <td className="px-4 py-2">
                       {row.valid ? (
-                        <span className="text-xs font-medium text-success">{t("import.validStatus")}</span>
+                        <span className="text-xs font-medium text-success">
+                          {t("import.validStatus")}
+                        </span>
                       ) : (
                         <span className="text-xs text-danger">{row.errors?.join("; ")}</span>
                       )}

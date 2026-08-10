@@ -1,6 +1,6 @@
-import { and, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, ilike, or, type SQL, sql } from "drizzle-orm";
 import type { Database, DatabaseTransaction } from "./client";
-import { exhibitors, type Visit, visitors, visits, visitSyncEvents } from "./schema";
+import { exhibitors, type Visit, visitors, visitSyncEvents, visits } from "./schema";
 
 /**
  * The only way a Visit row should ever be written. Idempotent upsert on the
@@ -80,7 +80,8 @@ export async function deleteVisit(
 
 export interface ScannedVisitorRow {
   visitorId: string;
-  name: string | null;
+  firstName: string | null;
+  lastName: string | null;
   company: string | null;
   phoneNumber: string | null;
   email: string | null;
@@ -99,14 +100,20 @@ export async function listVisitsForExhibitor(
   const conditions: SQL[] = [eq(visits.exhibitorId, exhibitorId)];
   if (search) {
     const like = `%${search}%`;
-    const searchCondition = or(ilike(visitors.name, like), ilike(visitors.company, like));
+    const searchCondition = or(
+      ilike(visitors.firstName, like),
+      ilike(visitors.lastName, like),
+      ilike(sql<string>`concat_ws(' ', ${visitors.firstName}, ${visitors.lastName})`, like),
+      ilike(visitors.company, like),
+    );
     if (searchCondition) conditions.push(searchCondition);
   }
 
   const rows = await db
     .select({
       visitorId: visitors.id,
-      name: visitors.name,
+      firstName: visitors.firstName,
+      lastName: visitors.lastName,
       company: visitors.company,
       phoneNumber: visitors.phoneNumber,
       email: visitors.email,
@@ -126,7 +133,8 @@ export async function listVisitsForExhibitor(
 
 export interface LeaderboardRow {
   exhibitorId: string;
-  exhibitorName: string;
+  exhibitorFirstName: string;
+  exhibitorLastName: string;
   totalVisits: number;
   totalScans: number;
 }
@@ -135,13 +143,14 @@ export async function getExhibitorLeaderboard(db: Database): Promise<Leaderboard
   const rows = await db
     .select({
       exhibitorId: exhibitors.id,
-      exhibitorName: exhibitors.name,
+      exhibitorFirstName: exhibitors.firstName,
+      exhibitorLastName: exhibitors.lastName,
       totalVisits: sql<number>`count(${visits.visitorId})::int`,
       totalScans: sql<number>`coalesce(sum(${visits.scanCount}), 0)::int`,
     })
     .from(exhibitors)
     .leftJoin(visits, eq(visits.exhibitorId, exhibitors.id))
-    .groupBy(exhibitors.id, exhibitors.name)
+    .groupBy(exhibitors.id, exhibitors.firstName, exhibitors.lastName)
     .orderBy(desc(sql`count(${visits.visitorId})`));
 
   return rows;
@@ -149,7 +158,8 @@ export async function getExhibitorLeaderboard(db: Database): Promise<Leaderboard
 
 export interface ExhibitorForVisitorRow {
   exhibitorId: string;
-  exhibitorName: string;
+  exhibitorFirstName: string;
+  exhibitorLastName: string;
   scanCount: number;
   lastScannedAt: Date;
 }
@@ -161,7 +171,8 @@ export async function getExhibitorsForVisitor(
   const rows = await db
     .select({
       exhibitorId: exhibitors.id,
-      exhibitorName: exhibitors.name,
+      exhibitorFirstName: exhibitors.firstName,
+      exhibitorLastName: exhibitors.lastName,
       scanCount: visits.scanCount,
       lastScannedAt: visits.lastScannedAt,
     })
@@ -179,9 +190,11 @@ export async function countTotalVisits(db: Database): Promise<number> {
 
 export interface VisitExportRow {
   exhibitorId: string;
-  exhibitorName: string;
+  exhibitorFirstName: string;
+  exhibitorLastName: string;
   visitorId: string;
-  visitorName: string | null;
+  visitorFirstName: string | null;
+  visitorLastName: string | null;
   visitorCompany: string | null;
   visitorType: "invited" | "guest";
   scanCount: number;
@@ -194,9 +207,11 @@ export async function listAllVisitsForExport(db: Database): Promise<VisitExportR
   const rows = await db
     .select({
       exhibitorId: exhibitors.id,
-      exhibitorName: exhibitors.name,
+      exhibitorFirstName: exhibitors.firstName,
+      exhibitorLastName: exhibitors.lastName,
       visitorId: visitors.id,
-      visitorName: visitors.name,
+      visitorFirstName: visitors.firstName,
+      visitorLastName: visitors.lastName,
       visitorCompany: visitors.company,
       visitorType: visitors.visitorType,
       scanCount: visits.scanCount,

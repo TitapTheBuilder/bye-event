@@ -37,7 +37,8 @@ const en = {
   "visitors.searchPlaceholder": "Search by name, company, email, phone\u2026",
   "visitors.allTypes": "All types",
   "visitors.showDeactivated": "Show deactivated",
-  "visitors.name": "Name",
+  "visitors.firstName": "First name",
+  "visitors.lastName": "Last name",
   "visitors.company": "Company",
   "visitors.contact": "Contact",
   "visitors.type": "Type",
@@ -56,9 +57,11 @@ const en = {
 
   // ── Import ───────────────────────────────────────────
   "import.title": "Import visitors",
-  "import.subtitle": "Upload a CSV or XLSX file. Valid rows are imported even if others have errors.",
+  "import.subtitle":
+    "Upload a CSV or XLSX file. Valid rows are imported even if others have errors.",
   "import.backToVisitors": "Back to visitors",
-  "import.expectedColumns": "Expected columns: name, company, phone number, email. Extra columns are ignored.",
+  "import.expectedColumns":
+    "Expected columns: first name, last name, company, phone number, email. Extra columns are ignored.",
   "import.parsing": "Parsing {name}\u2026",
   "import.imported": "Imported {count} visitor(s) successfully.",
   "import.valid": "{count} valid",
@@ -67,7 +70,8 @@ const en = {
   "import.importButton": "Import {count} valid row(s)",
   "import.importing": "Importing\u2026",
   "import.row": "Row",
-  "import.name": "Name",
+  "import.firstName": "First name",
+  "import.lastName": "Last name",
   "import.company": "Company",
   "import.phone": "Phone",
   "import.email": "Email",
@@ -76,7 +80,8 @@ const en = {
 
   // ── Guests ───────────────────────────────────────────
   "guests.title": "Guests",
-  "guests.subtitle": "Generate walk-in guest badges in bulk. Names and contact details get filled in later, as guests check in.",
+  "guests.subtitle":
+    "Generate walk-in guest badges in bulk. Names and contact details get filled in later, as guests check in.",
   "guests.countLabel": "Number of guest badges",
   "guests.generate": "Generate guest badges",
   "guests.generating": "Generating\u2026",
@@ -90,7 +95,8 @@ const en = {
 
   // ── Badges ───────────────────────────────────────────
   "badges.title": "Badges",
-  "badges.subtitle": "Print-ready badge PDFs. Invited badges show name + company + QR; guest badges show QR only, since no name is known yet.",
+  "badges.subtitle":
+    "Print-ready badge PDFs. Invited badges show name + company + QR; guest badges show QR only, since no name is known yet.",
   "badges.allActive": "All active",
   "badges.chooseSpecific": "Choose specific",
   "badges.searchVisitors": "Search visitors\u2026",
@@ -103,7 +109,8 @@ const en = {
 
   // ── Branding ─────────────────────────────────────────
   "branding.title": "Branding",
-  "branding.subtitle": "The business customer\u2019s logo and brand colors, used across both the exhibitor scanner app and this panel. The University of Tehran mark stays fixed regardless.",
+  "branding.subtitle":
+    "The business customer\u2019s logo and brand colors, used across both the exhibitor scanner app and this panel. The University of Tehran mark stays fixed regardless.",
   "branding.noLogo": "No logo yet",
   "branding.uploadLogo": "Upload new logo",
   "branding.uploading": "Uploading\u2026",
@@ -116,11 +123,13 @@ const en = {
   "branding.saving": "Saving\u2026",
   "branding.saved": "Branding saved.",
   "branding.logoUploaded": "Logo uploaded and brand colors extracted automatically.",
-  "branding.logoUploadedNoColors": "Logo uploaded. Colors couldn\u2019t be auto-extracted from this file \u2014 set them manually below.",
+  "branding.logoUploadedNoColors":
+    "Logo uploaded. Colors couldn\u2019t be auto-extracted from this file \u2014 set them manually below.",
 
   // ── Export ───────────────────────────────────────────
   "export.title": "Data export",
-  "export.subtitle": "Download a snapshot of visitors, exhibitors, or visits as CSV, XLSX, or JSON.",
+  "export.subtitle":
+    "Download a snapshot of visitors, exhibitors, or visits as CSV, XLSX, or JSON.",
   "export.includeDeactivated": "Include deactivated records",
   "export.visitors": "Visitors",
   "export.visitorsDesc": "All invited and guest visitor records.",
@@ -131,9 +140,11 @@ const en = {
 
   // ── Exhibitors ───────────────────────────────────────
   "exhibitors.title": "Exhibitors",
-  "exhibitors.subtitle": "Booth staff accounts. Exhibitors self-register from the scanner app; deactivate an account here if someone should lose access.",
+  "exhibitors.subtitle":
+    "Booth staff accounts. Exhibitors self-register from the scanner app; deactivate an account here if someone should lose access.",
   "exhibitors.showDeactivated": "Show deactivated",
-  "exhibitors.name": "Name",
+  "exhibitors.firstName": "First name",
+  "exhibitors.lastName": "Last name",
   "exhibitors.username": "Username",
   "exhibitors.phone": "Phone",
   "exhibitors.status": "Status",
@@ -144,7 +155,8 @@ const en = {
 
   // ── Admins ───────────────────────────────────────────
   "admins.title": "Admin accounts",
-  "admins.subtitle": "Manage other administrators. The initial admin was created during deployment.",
+  "admins.subtitle":
+    "Manage other administrators. The initial admin was created during deployment.",
   "admins.addAdmin": "Add admin",
   "admins.addTitle": "Add admin",
   "admins.name": "Name",
@@ -170,7 +182,8 @@ const en = {
   "dashTable.lastScan": "last {date}",
 
   // ── Visitor form (shared) ────────────────────────────
-  "form.name": "Name",
+  "form.firstName": "First name",
+  "form.lastName": "Last name",
   "form.company": "Company",
   "form.phone": "Phone number",
   "form.email": "Email",
@@ -231,7 +244,8 @@ const fa: Record<keyof typeof en, string> = {
   "visitors.searchPlaceholder": "جستجو بر اساس نام، شرکت، ایمیل، تلفن…",
   "visitors.allTypes": "همه انواع",
   "visitors.showDeactivated": "نمایش غیرفعال‌شده‌ها",
-  "visitors.name": "نام",
+  "visitors.firstName": "نام",
+  "visitors.lastName": "نام خانوادگی",
   "visitors.company": "شرکت",
   "visitors.contact": "تماس",
   "visitors.type": "نوع",
@@ -250,9 +264,11 @@ const fa: Record<keyof typeof en, string> = {
 
   // ── وارد کردن ───────────────────────────────────────
   "import.title": "وارد کردن بازدیدکنندگان",
-  "import.subtitle": "یک فایل CSV یا XLSX بارگذاری کنید. ردیف‌های معتبر حتی با وجود خطا در سایر ردیف‌ها وارد می‌شوند.",
+  "import.subtitle":
+    "یک فایل CSV یا XLSX بارگذاری کنید. ردیف‌های معتبر حتی با وجود خطا در سایر ردیف‌ها وارد می‌شوند.",
   "import.backToVisitors": "بازگشت به بازدیدکنندگان",
-  "import.expectedColumns": "ستون‌های مورد انتظار: نام، شرکت، شماره تلفن، ایمیل. ستون‌های اضافی نادیده گرفته می‌شوند.",
+  "import.expectedColumns":
+    "ستون‌های مورد انتظار: نام، نام خانوادگی، شرکت، شماره تلفن، ایمیل. ستون‌های اضافی نادیده گرفته می‌شوند.",
   "import.parsing": "در حال تجزیه {name}…",
   "import.imported": "{count} بازدیدکننده با موفقیت وارد شد.",
   "import.valid": "{count} معتبر",
@@ -261,7 +277,8 @@ const fa: Record<keyof typeof en, string> = {
   "import.importButton": "وارد کردن {count} ردیف معتبر",
   "import.importing": "در حال وارد کردن…",
   "import.row": "ردیف",
-  "import.name": "نام",
+  "import.firstName": "نام",
+  "import.lastName": "نام خانوادگی",
   "import.company": "شرکت",
   "import.phone": "تلفن",
   "import.email": "ایمیل",
@@ -270,7 +287,8 @@ const fa: Record<keyof typeof en, string> = {
 
   // ── مهمانان ───────────────────────────────────────
   "guests.title": "مهمانان",
-  "guests.subtitle": "تولید انبوه نشان مهمان. نام‌ها و اطلاعات تماس بعداً هنگام ورود مهمانان تکمیل می‌شوند.",
+  "guests.subtitle":
+    "تولید انبوه نشان مهمان. نام‌ها و اطلاعات تماس بعداً هنگام ورود مهمانان تکمیل می‌شوند.",
   "guests.countLabel": "تعداد نشان‌های مهمان",
   "guests.generate": "تولید نشان‌های مهمان",
   "guests.generating": "در حال تولید…",
@@ -284,7 +302,8 @@ const fa: Record<keyof typeof en, string> = {
 
   // ── نشان‌ها ───────────────────────────────────────
   "badges.title": "نشان‌ها",
-  "badges.subtitle": "نشان‌های PDF آماده چاپ. نشان‌های دعوتی شامل نام + شرکت + QR؛ نشان‌های مهمان فقط QR.",
+  "badges.subtitle":
+    "نشان‌های PDF آماده چاپ. نشان‌های دعوتی شامل نام + شرکت + QR؛ نشان‌های مهمان فقط QR.",
   "badges.allActive": "همه فعال",
   "badges.chooseSpecific": "انتخاب موردی",
   "badges.searchVisitors": "جستجوی بازدیدکنندگان…",
@@ -297,7 +316,8 @@ const fa: Record<keyof typeof en, string> = {
 
   // ── برندسازی ─────────────────────────────────────
   "branding.title": "برندسازی",
-  "branding.subtitle": "لوگو و رنگ‌های برند مشتری که در هر دو اپلیکیشن استفاده می‌شود. نشان دانشگاه تهران ثابت می‌ماند.",
+  "branding.subtitle":
+    "لوگو و رنگ‌های برند مشتری که در هر دو اپلیکیشن استفاده می‌شود. نشان دانشگاه تهران ثابت می‌ماند.",
   "branding.noLogo": "هنوز لوگویی نیست",
   "branding.uploadLogo": "بارگذاری لوگوی جدید",
   "branding.uploading": "در حال بارگذاری…",
@@ -314,7 +334,8 @@ const fa: Record<keyof typeof en, string> = {
 
   // ── خروجی ───────────────────────────────────────
   "export.title": "خروجی داده",
-  "export.subtitle": "دانلود اطلاعات بازدیدکنندگان، غرفه‌داران یا بازدیدها به صورت CSV، XLSX یا JSON.",
+  "export.subtitle":
+    "دانلود اطلاعات بازدیدکنندگان، غرفه‌داران یا بازدیدها به صورت CSV، XLSX یا JSON.",
   "export.includeDeactivated": "شامل رکوردهای غیرفعال",
   "export.visitors": "بازدیدکنندگان",
   "export.visitorsDesc": "تمام رکوردهای بازدیدکنندگان دعوتی و مهمان.",
@@ -325,9 +346,11 @@ const fa: Record<keyof typeof en, string> = {
 
   // ── غرفه‌داران ───────────────────────────────────
   "exhibitors.title": "غرفه‌داران",
-  "exhibitors.subtitle": "حساب‌های کارکنان غرفه. غرفه‌داران از اپلیکیشن اسکنر ثبت‌نام می‌کنند؛ حساب را اینجا غیرفعال کنید.",
+  "exhibitors.subtitle":
+    "حساب‌های کارکنان غرفه. غرفه‌داران از اپلیکیشن اسکنر ثبت‌نام می‌کنند؛ حساب را اینجا غیرفعال کنید.",
   "exhibitors.showDeactivated": "نمایش غیرفعال‌شده‌ها",
-  "exhibitors.name": "نام",
+  "exhibitors.firstName": "نام",
+  "exhibitors.lastName": "نام خانوادگی",
   "exhibitors.username": "نام کاربری",
   "exhibitors.phone": "تلفن",
   "exhibitors.status": "وضعیت",
@@ -364,7 +387,8 @@ const fa: Record<keyof typeof en, string> = {
   "dashTable.lastScan": "آخرین {date}",
 
   // ── فرم بازدیدکننده ────────────────────────────────
-  "form.name": "نام",
+  "form.firstName": "نام",
+  "form.lastName": "نام خانوادگی",
   "form.company": "شرکت",
   "form.phone": "شماره تلفن",
   "form.email": "ایمیل",

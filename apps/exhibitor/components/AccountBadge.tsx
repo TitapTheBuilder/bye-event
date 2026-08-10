@@ -1,5 +1,6 @@
 "use client";
 
+import { formatPersonName, getPersonInitials } from "@repo/shared/person-name";
 import Link from "next/link";
 import { useAuth } from "@/lib/client/auth-context";
 import { useTranslation } from "@/lib/client/language-context";
@@ -23,17 +24,13 @@ export function AccountBadge() {
     );
   }
 
-  const initials = exhibitor.name
-    .split(" ")
-    .map((part) => part[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
+  const displayName = formatPersonName(exhibitor.firstName, exhibitor.lastName);
+  const initials = getPersonInitials(exhibitor.firstName, exhibitor.lastName);
 
   return (
     <Link
       href="/profile"
-      aria-label={`Profile: ${exhibitor.name}`}
+      aria-label={`Profile: ${displayName}`}
       className="relative z-10 flex h-11 w-11 touch-manipulation items-center justify-center rounded-full text-sm font-semibold text-white"
       style={{ background: "var(--brand-gradient)" }}
     >

@@ -1,13 +1,14 @@
 "use client";
 
+import { formatPersonName } from "@repo/shared/person-name";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { SyncStatusChip } from "@/components/SyncStatusChip";
 import { VisitorTypeBadge } from "@/components/VisitorTypeBadge";
 import { useTranslation } from "@/lib/client/language-context";
 import { getOutboxEntryByQrToken } from "@/lib/offline/idb";
-import { refreshVisitor, resolveVisitor } from "@/lib/offline/visitor-lookup";
 import type { CachedVisitor } from "@/lib/offline/types";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { refreshVisitor, resolveVisitor } from "@/lib/offline/visitor-lookup";
 
 type State =
   | { status: "loading" }
@@ -41,8 +42,7 @@ export default function VisitorDescriptionPage() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [qrToken]);
+  }, [qrToken, scannedAt]);
 
   useEffect(() => {
     if (state.status !== "pending-offline") return;
@@ -75,18 +75,14 @@ export default function VisitorDescriptionPage() {
       {state.status === "not-found" ? (
         <div className="rounded-2xl border border-border-subtle bg-surface-1 p-6 text-center">
           <p className="text-text-primary">{t("visitor.notFound")}</p>
-          <p className="mt-1 text-sm text-text-secondary">
-            {t("visitor.notFoundHint")}
-          </p>
+          <p className="mt-1 text-sm text-text-secondary">{t("visitor.notFoundHint")}</p>
         </div>
       ) : null}
 
       {state.status === "pending-offline" ? (
         <div className="rounded-2xl border border-border-subtle bg-surface-1 p-6 text-center">
           <p className="text-text-primary">{t("visitor.pendingOffline")}</p>
-          <p className="mt-1 text-sm text-text-secondary">
-            {t("visitor.savedOnDevice")}
-          </p>
+          <p className="mt-1 text-sm text-text-secondary">{t("visitor.savedOnDevice")}</p>
         </div>
       ) : null}
 
@@ -95,7 +91,8 @@ export default function VisitorDescriptionPage() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <h1 className="text-xl font-semibold text-text-primary">
-                {state.visitor.name ?? t("visitor.guestVisitor")}
+                {formatPersonName(state.visitor.firstName, state.visitor.lastName) ||
+                  t("visitor.guestVisitor")}
               </h1>
               {state.visitor.company ? (
                 <p className="text-sm text-text-secondary">{state.visitor.company}</p>
@@ -128,7 +125,9 @@ export default function VisitorDescriptionPage() {
 
           <div className="mt-6 flex items-center justify-between border-t border-border-subtle pt-4">
             <span className="text-xs text-text-muted">
-              {scannedAt ? t("visitor.scannedAt", { date: new Date(scannedAt).toLocaleString() }) : null}
+              {scannedAt
+                ? t("visitor.scannedAt", { date: new Date(scannedAt).toLocaleString() })
+                : null}
             </span>
             <SyncStatusChip />
           </div>
@@ -141,6 +140,7 @@ export default function VisitorDescriptionPage() {
 function PhoneIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <title>Phone</title>
       <path
         d="M6.6 10.8c1.4 2.8 3.8 5.2 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.2.5 2.4.8 3.7.9.6 0 1 .5 1 1v3.6c0 .6-.4 1-1 1C11.6 21.5 2.5 12.4 2.5 3.9c0-.6.4-1 1-1H7c.6 0 1 .4 1 1 .1 1.3.4 2.5.9 3.7.2.3.1.7-.2 1L6.6 10.8Z"
         fill="currentColor"
@@ -152,6 +152,7 @@ function PhoneIcon() {
 function MailIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <title>Email</title>
       <path
         d="M3 6h18v12H3V6Zm18 0-9 7-9-7"
         stroke="currentColor"

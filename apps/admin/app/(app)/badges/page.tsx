@@ -1,9 +1,10 @@
 "use client";
 
+import type { Visitor } from "@repo/db";
+import { formatPersonName } from "@repo/shared/person-name";
+import { useEffect, useState } from "react";
 import { buttonPrimaryClassName, inputClassName } from "@/components/FormField";
 import { useTranslation } from "@/lib/client/language-context";
-import type { Visitor } from "@repo/db";
-import { useEffect, useState } from "react";
 
 type VisitorType = "invited" | "guest";
 type Mode = "all" | "select";
@@ -30,7 +31,7 @@ async function downloadBadgePdf(visitorType: VisitorType, visitorIds?: string[])
 }
 
 export default function BadgesPage() {
-  const { t, dir } = useTranslation();
+  const { t } = useTranslation();
   const [visitorType, setVisitorType] = useState<VisitorType>("invited");
   const [mode, setMode] = useState<Mode>("all");
   const [search, setSearch] = useState("");
@@ -92,9 +93,7 @@ export default function BadgesPage() {
     <div className="flex max-w-3xl flex-col gap-6">
       <div>
         <h1 className="text-xl font-semibold text-text-primary">{t("badges.title")}</h1>
-        <p className="text-sm text-text-secondary">
-          {t("badges.subtitle")}
-        </p>
+        <p className="text-sm text-text-secondary">{t("badges.subtitle")}</p>
       </div>
 
       <div className="flex flex-wrap gap-3">
@@ -160,7 +159,8 @@ export default function BadgesPage() {
                       className="h-4 w-4 rounded border-border-subtle"
                     />
                     <span className="text-sm text-text-primary">
-                      {visitor.name ?? t("badges.unfilledGuest")}
+                      {formatPersonName(visitor.firstName, visitor.lastName) ||
+                        t("badges.unfilledGuest")}
                     </span>
                     <span className="text-xs text-text-muted">{visitor.company}</span>
                   </li>
@@ -168,7 +168,9 @@ export default function BadgesPage() {
               </ul>
             )}
           </div>
-          <p className="text-xs text-text-muted">{t("badges.selected", { count: selected.size.toString() })}</p>
+          <p className="text-xs text-text-muted">
+            {t("badges.selected", { count: selected.size.toString() })}
+          </p>
         </div>
       ) : null}
 

@@ -1,15 +1,17 @@
 "use client";
 
+import { formatPersonName } from "@repo/shared/person-name";
+import { Fragment, useState } from "react";
+import { inputClassName } from "@/components/FormField";
 import { Pagination } from "@/components/Pagination";
 import { VisitorTypeBadge } from "@/components/StatusPill";
-import { useVisitors } from "@/lib/client/use-visitors";
 import { useTranslation } from "@/lib/client/language-context";
-import { inputClassName } from "@/components/FormField";
-import { Fragment, useState } from "react";
+import { useVisitors } from "@/lib/client/use-visitors";
 
 interface ExhibitorForVisitor {
   exhibitorId: string;
-  exhibitorName: string;
+  exhibitorFirstName: string;
+  exhibitorLastName: string;
   scanCount: number;
   lastScannedAt: string;
 }
@@ -57,7 +59,8 @@ export function DashboardVisitorsTable() {
           <thead className="border-b border-border-subtle text-text-secondary">
             <tr>
               <th className="w-10 px-4 py-3" />
-              <th className="px-4 py-3">{t("dashTable.name")}</th>
+              <th className="px-4 py-3">{t("visitors.firstName")}</th>
+              <th className="px-4 py-3">{t("visitors.lastName")}</th>
               <th className="px-4 py-3">{t("dashTable.company")}</th>
               <th className="px-4 py-3">{t("dashTable.type")}</th>
             </tr>
@@ -65,13 +68,13 @@ export function DashboardVisitorsTable() {
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-text-secondary">
+                <td colSpan={5} className="px-4 py-8 text-center text-text-secondary">
                   {t("common.loading")}
                 </td>
               </tr>
             ) : visitors.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-text-secondary">
+                <td colSpan={5} className="px-4 py-8 text-center text-text-secondary">
                   {t("dashTable.noVisitors")}
                 </td>
               </tr>
@@ -85,21 +88,25 @@ export function DashboardVisitorsTable() {
                     <td className="px-4 py-3 text-text-muted">
                       {expandedId === visitor.id ? "▾" : "▸"}
                     </td>
-                    <td className="px-4 py-3 text-text-primary">{visitor.name ?? "—"}</td>
+                    <td className="px-4 py-3 text-text-primary">{visitor.firstName ?? "—"}</td>
+                    <td className="px-4 py-3 text-text-primary">{visitor.lastName ?? "—"}</td>
                     <td className="px-4 py-3 text-text-secondary">{visitor.company ?? "—"}</td>
                     <td className="px-4 py-3">
                       <VisitorTypeBadge visitorType={visitor.visitorType} />
                     </td>
                   </tr>
                   {expandedId === visitor.id ? (
-                    <tr key={`${visitor.id}-expanded`} className="border-b border-border-subtle bg-surface-0/40">
-                      <td colSpan={4} className="px-4 py-3">
+                    <tr
+                      key={`${visitor.id}-expanded`}
+                      className="border-b border-border-subtle bg-surface-0/40"
+                    >
+                      <td colSpan={5} className="px-4 py-3">
                         {loadingExpand === visitor.id ? (
-                          <p className="text-sm text-text-secondary">{t("dashTable.loadingScans")}</p>
-                        ) : (exhibitorsById[visitor.id]?.length ?? 0) === 0 ? (
                           <p className="text-sm text-text-secondary">
-                            {t("dashTable.noScans")}
+                            {t("dashTable.loadingScans")}
                           </p>
+                        ) : (exhibitorsById[visitor.id]?.length ?? 0) === 0 ? (
+                          <p className="text-sm text-text-secondary">{t("dashTable.noScans")}</p>
                         ) : (
                           <ul className="flex flex-col gap-1.5">
                             {exhibitorsById[visitor.id]?.map((row) => (
@@ -107,9 +114,14 @@ export function DashboardVisitorsTable() {
                                 key={row.exhibitorId}
                                 className="flex items-center justify-between text-sm text-text-secondary"
                               >
-                                <span className="text-text-primary">{row.exhibitorName}</span>
+                                <span className="text-text-primary">
+                                  {formatPersonName(row.exhibitorFirstName, row.exhibitorLastName)}
+                                </span>
                                 <span>
-                                  {t("dashTable.scans", { count: row.scanCount.toString() })} · {t("dashTable.lastScan", { date: new Date(row.lastScannedAt).toLocaleString() })}
+                                  {t("dashTable.scans", { count: row.scanCount.toString() })} ·{" "}
+                                  {t("dashTable.lastScan", {
+                                    date: new Date(row.lastScannedAt).toLocaleString(),
+                                  })}
                                 </span>
                               </li>
                             ))}
@@ -125,7 +137,12 @@ export function DashboardVisitorsTable() {
         </table>
       </div>
 
-      <Pagination page={query.page} pageSize={query.pageSize} total={total} onPageChange={setPage} />
+      <Pagination
+        page={query.page}
+        pageSize={query.pageSize}
+        total={total}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

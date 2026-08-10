@@ -1,19 +1,20 @@
 "use client";
 
+import type { Visitor } from "@repo/db";
+import { useState } from "react";
 import { buttonPrimaryClassName, inputClassName } from "@/components/FormField";
 import { Modal } from "@/components/Modal";
 import { Pagination } from "@/components/Pagination";
 import { StatusPill } from "@/components/StatusPill";
 import { VisitorForm, type VisitorFormValues } from "@/components/VisitorForm";
+import { useTranslation } from "@/lib/client/language-context";
 import { useToast } from "@/lib/client/toast";
 import { useVisitors } from "@/lib/client/use-visitors";
-import { useTranslation } from "@/lib/client/language-context";
-import type { Visitor } from "@repo/db";
-import { useState } from "react";
 
 function toFormValues(visitor: Visitor): Partial<VisitorFormValues> {
   return {
-    name: visitor.name ?? "",
+    firstName: visitor.firstName ?? "",
+    lastName: visitor.lastName ?? "",
     company: visitor.company ?? "",
     phoneNumber: visitor.phoneNumber ?? "",
     email: visitor.email ?? "",
@@ -102,9 +103,7 @@ export default function GuestsPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-xl font-semibold text-text-primary">{t("guests.title")}</h1>
-        <p className="text-sm text-text-secondary">
-          {t("guests.subtitle")}
-        </p>
+        <p className="text-sm text-text-secondary">{t("guests.subtitle")}</p>
       </div>
 
       <form
@@ -132,7 +131,9 @@ export default function GuestsPage() {
         </button>
         {generateError ? <p className="text-sm text-danger">{generateError}</p> : null}
         {lastGenerated !== null ? (
-          <p className="text-sm text-success">{t("guests.generated", { count: lastGenerated.toString() })}</p>
+          <p className="text-sm text-success">
+            {t("guests.generated", { count: lastGenerated.toString() })}
+          </p>
         ) : null}
       </form>
 
@@ -140,31 +141,37 @@ export default function GuestsPage() {
         <table className={`w-full min-w-[640px] text-sm text-${dir === "rtl" ? "end" : "start"}`}>
           <thead className="border-b border-border-subtle text-text-secondary">
             <tr>
-              <th className="px-4 py-3">{t("visitors.name")}</th>
+              <th className="px-4 py-3">{t("visitors.firstName")}</th>
+              <th className="px-4 py-3">{t("visitors.lastName")}</th>
               <th className="px-4 py-3">{t("visitors.company")}</th>
               <th className="px-4 py-3">{t("visitors.contact")}</th>
               <th className="px-4 py-3">{t("visitors.status")}</th>
               <th className="px-4 py-3">{t("visitors.created")}</th>
-              <th className={`px-4 py-3 text-${dir === "rtl" ? "start" : "end"}`}>{t("visitors.actions")}</th>
+              <th className={`px-4 py-3 text-${dir === "rtl" ? "start" : "end"}`}>
+                {t("visitors.actions")}
+              </th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-text-secondary">
+                <td colSpan={7} className="px-4 py-8 text-center text-text-secondary">
                   {t("common.loading")}
                 </td>
               </tr>
             ) : visitors.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-text-secondary">
+                <td colSpan={7} className="px-4 py-8 text-center text-text-secondary">
                   {t("guests.noGuests")}
                 </td>
               </tr>
             ) : (
               visitors.map((visitor) => (
                 <tr key={visitor.id} className="border-b border-border-subtle last:border-0">
-                  <td className="px-4 py-3 text-text-primary">{visitor.name ?? t("guests.unfilled")}</td>
+                  <td className="px-4 py-3 text-text-primary">
+                    {visitor.firstName ?? t("guests.unfilled")}
+                  </td>
+                  <td className="px-4 py-3 text-text-primary">{visitor.lastName ?? "—"}</td>
                   <td className="px-4 py-3 text-text-secondary">{visitor.company ?? "—"}</td>
                   <td className="px-4 py-3 text-text-secondary">
                     <div>{visitor.phoneNumber ?? "—"}</div>
@@ -203,7 +210,12 @@ export default function GuestsPage() {
         </table>
       </div>
 
-      <Pagination page={query.page} pageSize={query.pageSize} total={total} onPageChange={setPage} />
+      <Pagination
+        page={query.page}
+        pageSize={query.pageSize}
+        total={total}
+        onPageChange={setPage}
+      />
 
       {editing ? (
         <Modal title={t("guests.guestDetails")} onClose={() => setEditing(null)}>

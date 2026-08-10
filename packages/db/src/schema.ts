@@ -1,5 +1,4 @@
-import { sql } from "drizzle-orm";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   index,
   integer,
@@ -22,10 +21,9 @@ import {
 export const visitorTypeEnum = pgEnum("visitor_type", ["invited", "guest"]);
 
 export const exhibitors = pgTable("exhibitors", {
-  id: uuid("id")
-    .primaryKey()
-    .default(sql`uuidv7()`),
-  name: varchar("name", { length: 200 }).notNull(),
+  id: uuid("id").primaryKey().default(sql`uuidv7()`),
+  firstName: varchar("first_name", { length: 200 }).notNull(),
+  lastName: varchar("last_name", { length: 200 }).notNull(),
   username: varchar("username", { length: 100 }).notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   phoneNumber: varchar("phone_number", { length: 30 }).notNull().unique(),
@@ -36,15 +34,14 @@ export const exhibitors = pgTable("exhibitors", {
 export const visitors = pgTable(
   "visitors",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: uuid("id").primaryKey().default(sql`uuidv7()`),
     // Independently-random from `id` on purpose: this is the value printed
     // on the badge and scanned by anyone, so it must never leak creation
     // order (which uuidv7 does) or be enumerable (which a serial int would
     // be). Never derive this from `id`.
     qrToken: varchar("qr_token", { length: 64 }).notNull().unique(),
-    name: varchar("name", { length: 200 }),
+    firstName: varchar("first_name", { length: 200 }),
+    lastName: varchar("last_name", { length: 200 }),
     company: varchar("company", { length: 200 }),
     phoneNumber: varchar("phone_number", { length: 30 }),
     email: varchar("email", { length: 200 }),
@@ -95,9 +92,7 @@ export const visitSyncEvents = pgTable(
 );
 
 export const admins = pgTable("admins", {
-  id: uuid("id")
-    .primaryKey()
-    .default(sql`uuidv7()`),
+  id: uuid("id").primaryKey().default(sql`uuidv7()`),
   name: varchar("name", { length: 200 }).notNull(),
   email: varchar("email", { length: 200 }).notNull().unique(),
   passwordHash: text("password_hash").notNull(),

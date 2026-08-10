@@ -1,10 +1,11 @@
 "use client";
 
+import { formatPersonName, getPersonInitials } from "@repo/shared/person-name";
+import { useRouter } from "next/navigation";
 import { SyncStatusChip } from "@/components/SyncStatusChip";
 import { useAuth } from "@/lib/client/auth-context";
-import { useSyncStatus } from "@/lib/client/use-sync-status";
 import { useTranslation } from "@/lib/client/language-context";
-import { useRouter } from "next/navigation";
+import { useSyncStatus } from "@/lib/client/use-sync-status";
 
 export default function ProfilePage() {
   const { exhibitor, isLoading, logout } = useAuth();
@@ -28,15 +29,12 @@ export default function ProfilePage() {
           className="flex h-16 w-16 items-center justify-center rounded-full text-xl font-semibold text-white"
           style={{ background: "var(--brand-gradient)" }}
         >
-          {exhibitor.name
-            .split(" ")
-            .map((p) => p[0])
-            .slice(0, 2)
-            .join("")
-            .toUpperCase()}
+          {getPersonInitials(exhibitor.firstName, exhibitor.lastName)}
         </div>
         <div>
-          <h1 className="text-lg font-semibold text-text-primary">{exhibitor.name}</h1>
+          <h1 className="text-lg font-semibold text-text-primary">
+            {formatPersonName(exhibitor.firstName, exhibitor.lastName)}
+          </h1>
           <p className="text-sm text-text-secondary">@{exhibitor.username}</p>
         </div>
       </div>

@@ -13,7 +13,8 @@ const optionalTrimmedString = (max: number) =>
 export const visitorTypeSchema = z.enum(VISITOR_TYPES);
 
 export const visitorCreateSchema = z.object({
-  name: optionalTrimmedString(200),
+  firstName: optionalTrimmedString(200),
+  lastName: optionalTrimmedString(200),
   company: optionalTrimmedString(200),
   phoneNumber: optionalTrimmedString(30),
   email: z
@@ -35,7 +36,8 @@ export type VisitorUpdateInput = z.infer<typeof visitorUpdateSchema>;
  * so a single bad row never blocks the rest of the file (partial-success
  * import). */
 export const visitorImportRowSchema = z.object({
-  name: optionalTrimmedString(200),
+  firstName: optionalTrimmedString(200),
+  lastName: optionalTrimmedString(200),
   company: optionalTrimmedString(200),
   phoneNumber: optionalTrimmedString(30),
   email: z
