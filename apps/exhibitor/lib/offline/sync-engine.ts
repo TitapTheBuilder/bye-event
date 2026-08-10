@@ -175,11 +175,17 @@ export class SyncEngine {
       if (syncedIds.length > 0) await markOutboxEntriesSynced(syncedIds);
 
       this.backoffMs = this.initialBackoffMs;
-      const remaining = await getUnsyncedOutboxEntries();
       const retryable = await getSyncableOutboxEntries();
-      if (retryable.length > 0) this.scheduleRetry();
-      else this.clearRetryTimer();
-      await this.setStatus(remaining.length > 0 ? "error" : "idle");
+      if (retryable.length > 0) {
+        this.scheduleRetry();
+        await this.setStatus("error");
+      } else {
+        this.clearRetryTimer();
+        // Permanent errors (e.g. visitor_not_found) are already surfaced
+        // per-item in the scanned list. The global chip should settle to
+        // "idle" once there is nothing the sync loop can actually do.
+        await this.setStatus("idle");
+      }
     } catch {
       await this.setStatus("error");
       this.scheduleRetry();

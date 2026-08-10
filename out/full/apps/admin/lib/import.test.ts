@@ -1,0 +1,71 @@
+import { describe, expect, it } from "vitest";
+import { parseVisitorImportFile } from "./import";
+
+function csvBuffer(text: string): Buffer {
+  return Buffer.from(text, "utf-8");
+}
+
+describe("parseVisitorImportFile", () => {
+  it("parses a well-formed CSV and validates every row", () => {
+    const csv = "name,company,phone number,email\nJane Doe,Acme,+1 555 000 0000,jane@acme.com\n";
+    const result = parseVisitorImportFile(csvBuffer(csv), "visitors.csv");
+
+    expect(result.rows).toHaveLength(1);
+    expect(result.validCount).toBe(1);
+    expect(result.invalidCount).toBe(0);
+    expect(result.rows[0]?.data).toMatchObject({
+      name: "Jane Doe",
+      company: "Acme",
+      phoneNumber: "+1 555 000 0000",
+      email: "jane@acme.com",
+    });
+  });
+
+  it("does a partial-success import: valid rows succeed even when others are invalid", () => {
+    const csv = [
+      "name,company,email",
+      "Jane Doe,Acme,jane@acme.com",
+      "John Smith,Widgets Inc,not-an-email",
+    ].join("\n");
+    const result = parseVisitorImportFile(csvBuffer(csv), "visitors.csv");
+
+    expect(result.rows).toHaveLength(2);
+    expect(result.validCount).toBe(1);
+    expect(result.invalidCount).toBe(1);
+
+    const [validRow, invalidRow] = result.rows;
+    expect(validRow?.valid).toBe(true);
+    expect(invalidRow?.valid).toBe(false);
+    expect(invalidRow?.errors?.length).toBeGreaterThan(0);
+  });
+
+  it("normalizes common header aliases (case-insensitive)", () => {
+    const csv = "Full Name,Organization,Mobile,E-mail\nAda Lovelace,Analytical Engines,555-1234,ada@example.com\n";
+    const result = parseVisitorImportFile(csvBuffer(csv), "visitors.csv");
+
+    expect(result.validCount).toBe(1);
+    expect(result.rows[0]?.data).toMatchObject({
+      name: "Ada Lovelace",
+      company: "Analytical Engines",
+      phoneNumber: "555-1234",
+      email: "ada@example.com",
+    });
+  });
+
+  it("skips fully blank rows instead of reporting them as invalid", () => {
+    const csv = "name,company,email\nJane Doe,Acme,jane@acme.com\n,,\n";
+    const result = parseVisitorImportFile(csvBuffer(csv), "visitors.csv");
+
+    expect(result.rows).toHaveLength(1);
+    expect(result.validCount).toBe(1);
+  });
+
+  it("allows every field to be blank except for validated ones (guest-like rows are still valid)", () => {
+    const csv = "name,company,email\n,Acme,\n";
+    const result = parseVisitorImportFile(csvBuffer(csv), "visitors.csv");
+
+    expect(result.rows).toHaveLength(1);
+    expect(result.validCount).toBe(1);
+    expect(result.rows[0]?.data).toMatchObject({ company: "Acme" });
+  });
+});

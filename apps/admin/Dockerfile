@@ -1,36 +1,44 @@
 # Multi-stage build for a Turborepo workspace app, producing a small
 # standalone Next.js image (output: "standalone" in next.config.ts).
 # Build from the monorepo root: `docker build -f apps/admin/Dockerfile .`
-FROM node:22-alpine AS base
-RUN corepack enable
+
+ARG BASE_IMAGE=docker.arvancloud.ir/node:22-alpine
+ARG NPM_REGISTRY=https://registry.npmjs.org/
+
+FROM ${BASE_IMAGE} AS base
+ARG NPM_REGISTRY=https://registry.npmjs.org/
+ENV NPM_CONFIG_REGISTRY=${NPM_REGISTRY}
+RUN npm install -g pnpm@11.18.0
 
 FROM base AS pruner
 WORKDIR /app
-RUN apk add --no-cache libc6-compat
 COPY . .
-RUN pnpm config set registry https://registry.npmmirror.com/ && \
-    CI=true pnpm install --frozen-lockfile
 RUN npx turbo prune @repo/admin --docker
 
 FROM base AS installer
 WORKDIR /app
 RUN apk add --no-cache libc6-compat
 COPY --from=pruner /app/out/json/ .
-RUN pnpm config set registry https://registry.npmmirror.com/ && \
-    CI=true pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    pnpm config set registry ${NPM_CONFIG_REGISTRY} && \
+    pnpm config set fetch-timeout 300000 && \
+    pnpm config set fetch-retries 10 && \
+    pnpm config set network-concurrency 3 && \
+    pnpm install --no-frozen-lockfile
 COPY --from=pruner /app/out/full/ .
+COPY --from=pruner /app/tsconfig.base.json ./
 ENV NEXT_TELEMETRY_DISABLED=1
-# Placeholder values only -- Next's page-data collection step imports
-# @repo/db (which requires DATABASE_URL to be *set*, not *reachable*) even
-# though every route here is force-dynamic and reads the real value at
-# request time. The real DATABASE_URL/SESSION_SECRET/ADMIN_PUBLIC_URL come
-# from docker-compose.yml at container start.
-ENV DATABASE_URL="postgres://build:[REDACTED]@localhost:5432/build"
+ENV NODE_ENV=production
+ENV DATABASE_URL="postgres://build:build@localhost:5432/build"
 ENV SESSION_SECRET="build-time-placeholder"
 RUN pnpm turbo run build --filter=@repo/admin
 
 FROM base AS runner
 WORKDIR /app
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    PORT=3000
+
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 
 COPY --from=installer /app/apps/admin/public ./apps/admin/public
@@ -44,5 +52,8 @@ RUN mkdir -p /app/uploads && chown nextjs:nodejs /app/uploads
 
 USER nextjs
 EXPOSE 3000
-ENV PORT=3000 NODE_ENV=production NEXT_TELEMETRY_DISABLED=1
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
+
 CMD ["node", "apps/admin/server.js"]

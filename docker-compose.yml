@@ -2,7 +2,7 @@ name: exhibition-system
 
 services:
   postgres:
-    image: postgres:18-alpine
+    image: docker.arvancloud.ir/postgres:18-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: exhibition
@@ -22,27 +22,39 @@ services:
     build:
       context: .
       dockerfile: apps/exhibitor/Dockerfile
+      args:
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmjs.org/}
+        BASE_IMAGE: ${BASE_IMAGE:-docker.arvancloud.ir/node:22-alpine}
     restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgres://exhibition:[REDACTED]@postgres:5432/exhibition
+      DATABASE_URL: postgres://exhibition:exhibition@postgres:5432/exhibition
       SESSION_SECRET: ${SESSION_SECRET:-dev-secret-change-me}
       NODE_ENV: production
     ports:
       - "3000:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   admin:
     build:
       context: .
       dockerfile: apps/admin/Dockerfile
+      args:
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmjs.org/}
+        BASE_IMAGE: ${BASE_IMAGE:-docker.arvancloud.ir/node:22-alpine}
     restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgres://exhibition:[REDACTED]@postgres:5432/exhibition
+      DATABASE_URL: postgres://exhibition:exhibition@postgres:5432/exhibition
       SESSION_SECRET: ${SESSION_SECRET:-dev-secret-change-me}
       NODE_ENV: production
       UPLOADS_DIR: /app/uploads
@@ -55,6 +67,12 @@ services:
       - uploads-data:/app/uploads
     ports:
       - "3001:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
 volumes:
   postgres-data:

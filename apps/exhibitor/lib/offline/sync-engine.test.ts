@@ -203,7 +203,10 @@ describe("SyncEngine", () => {
     await addOutboxEntry({ localId: "a", qrToken: "tok-bad", scannedAt: new Date().toISOString() });
 
     await engine.flush();
-    expect(engine.getStatus()).toBe("error");
+    // The entry is permanently parked -- nothing retryable remains, so the
+    // global chip should settle to "idle" rather than staying in "error".
+    // The per-item "sync-error" badge in the scanned list surfaces it instead.
+    expect(engine.getStatus()).toBe("idle");
 
     fetchMock.mockClear();
     await engine.flush();
