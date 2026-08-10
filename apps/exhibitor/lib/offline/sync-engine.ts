@@ -40,7 +40,11 @@ export class SyncEngine {
     fetchImpl: typeof fetch = fetch,
     options: { initialBackoffMs?: number; maxBackoffMs?: number } = {},
   ) {
-    this.fetchImpl = fetchImpl;
+    // `fetch` is a method of the global object: browsers throw
+    // "Illegal invocation" when it runs with any other receiver, and storing
+    // it on an instance field means `this.fetchImpl(...)` calls it with the
+    // SyncEngine as `this`. Bind it once here so every call site is safe.
+    this.fetchImpl = fetchImpl.bind(globalThis);
     this.initialBackoffMs = options.initialBackoffMs ?? INITIAL_BACKOFF_MS;
     this.maxBackoffMs = options.maxBackoffMs ?? MAX_BACKOFF_MS;
     this.backoffMs = this.initialBackoffMs;
@@ -186,7 +190,11 @@ export class SyncEngine {
         // "idle" once there is nothing the sync loop can actually do.
         await this.setStatus("idle");
       }
-    } catch {
+    } catch (err) {
+      // Surface the reason. A flush that dies before the request is even
+      // sent is otherwise indistinguishable from a flaky network -- the UI
+      // can only ever show a generic "sync issue" for both.
+      console.warn("Visit sync flush failed", err);
       await this.setStatus("error");
       this.scheduleRetry();
     }

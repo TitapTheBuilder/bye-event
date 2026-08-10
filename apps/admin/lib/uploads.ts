@@ -30,18 +30,10 @@ export function getUploadsDir(): string {
   return process.env.UPLOADS_DIR ?? path.join(process.cwd(), ".uploads");
 }
 
-function getAdminPublicOrigin(): string {
-  // No trailing slash. Falls back to a relative path in dev, which works
-  // fine as long as the exhibitor app is proxied behind the same origin;
-  // for a real multi-subdomain deployment, set ADMIN_PUBLIC_URL so the
-  // stored logo_url is absolute and resolvable from the exhibitor app too.
-  return process.env.ADMIN_PUBLIC_URL?.replace(/\/+$/, "") ?? "";
-}
-
 export interface SavedUpload {
   /** Absolute path on disk -- useful for passing straight to node-vibrant. */
   filePath: string;
-  /** Absolute, publicly-reachable URL to store in event_settings.logo_url. */
+  /** Origin-relative URL to store in event_settings.logo_url. */
   url: string;
 }
 
@@ -56,8 +48,13 @@ export async function saveLogoUpload(buffer: Buffer, contentType: string): Promi
   const filePath = path.join(/* turbopackIgnore: true */ dir, filename);
   await writeFile(filePath, buffer);
 
-  const relativePath = `/uploads/logos/${filename}`;
-  return { filePath, url: `${getAdminPublicOrigin()}${relativePath}` };
+  // Deliberately origin-RELATIVE. Both apps mount the same uploads volume
+  // and serve it from their own /uploads/[...path] route, so each one
+  // resolves this against whatever host the browser is actually on.
+  // Baking in an absolute origin here instead breaks the moment that
+  // origin isn't reachable from the viewer's device (the classic case:
+  // a `localhost` default that means "the phone itself" on a real server).
+  return { filePath, url: `/uploads/logos/${filename}` };
 }
 
 const SAFE_SEGMENT = /^[a-zA-Z0-9._-]+$/;

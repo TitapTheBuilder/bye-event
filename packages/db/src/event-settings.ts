@@ -17,9 +17,24 @@ const DEFAULTS: Omit<EventSettings, "id" | "updatedAt"> = {
   accentColor: "#22d3ee",
 };
 
+/**
+ * Logos are stored as origin-relative `/uploads/...` paths so each app
+ * resolves them against the host the browser is actually on. Older rows
+ * were written with an absolute origin baked in (from a since-removed
+ * ADMIN_PUBLIC_URL setting), which renders as a broken image anywhere that
+ * origin isn't reachable -- most obviously a `localhost` URL opened from a
+ * phone. Strip it back to the path so those deployments heal on read
+ * instead of needing the logo uploaded again.
+ */
+export function toRelativeUploadUrl(url: string | null): string | null {
+  if (!url) return url;
+  const match = /^https?:\/\/[^/]+(\/uploads\/.+)$/.exec(url);
+  return match?.[1] ?? url;
+}
+
 export async function getEventSettings(db: Database): Promise<EventSettings> {
   const [row] = await db.select().from(eventSettings).where(eq(eventSettings.id, 1)).limit(1);
-  if (row) return row;
+  if (row) return { ...row, logoUrl: toRelativeUploadUrl(row.logoUrl) };
   return { id: 1, updatedAt: new Date(), ...DEFAULTS };
 }
 
@@ -44,5 +59,5 @@ export async function upsertEventSettings(
     })
     .returning();
   if (!row) throw new Error("Failed to upsert event settings");
-  return row;
+  return { ...row, logoUrl: toRelativeUploadUrl(row.logoUrl) };
 }

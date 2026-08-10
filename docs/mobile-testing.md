@@ -39,9 +39,9 @@ The phone and PC must be on the same network, and the PC firewall must allow inb
 
 ## Admin and uploaded logos
 
-The exhibitor app fetches uploaded branding from the absolute URL stored by the admin app. `ADMIN_PUBLIC_URL=http://localhost:3001` only works on the PC: on a phone, `localhost` means the phone itself, and an HTTPS exhibitor page will block an HTTP logo as mixed content.
+`event_settings.logo_url` is stored origin-relative (`/uploads/logos/<file>`) and each app serves the file itself from its own `/uploads/[...path]` route, so the logo resolves against whatever host the browser is on — phone, LAN IP, or production domain — with no extra configuration and no mixed-content risk.
 
-For shared-device testing or deployment, serve the admin app from a phone-reachable HTTPS origin and set `ADMIN_PUBLIC_URL` to that origin before uploading the logo. Existing logos saved with a `localhost` URL should be uploaded again after correcting the setting.
+What both apps DO need is the same uploads directory: set `UPLOADS_DIR` to a shared location for both (in `docker-compose.yml` this is the `uploads-data` volume; for local dev `apps/exhibitor/.uploads` is a symlink to `apps/admin/.uploads`). If the exhibitor app can't see the admin's uploads, the logo 404s.
 
 ## Reverse-proxy deployments
 

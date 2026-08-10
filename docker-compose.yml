@@ -60,12 +60,11 @@ services:
       DATABASE_URL: postgres://exhibition:exhibition@postgres:5432/exhibition
       SESSION_SECRET: ${SESSION_SECRET:-dev-secret-change-me}
       NODE_ENV: production
+      # Logos uploaded here land on the shared uploads-data volume and are
+      # served by BOTH apps from their own /uploads/[...path] route, so
+      # event_settings.logo_url stays origin-relative and needs no
+      # knowledge of this app's public URL.
       UPLOADS_DIR: /app/uploads
-      # Absolute, publicly-reachable origin of the admin app. Needed because
-      # event_settings.logo_url (uploaded here) is also read by the
-      # exhibitor app, which runs as a separate container/subdomain -- see
-      # apps/admin/lib/uploads.ts.
-      ADMIN_PUBLIC_URL: ${ADMIN_PUBLIC_URL:-http://localhost:3001}
     volumes:
       - uploads-data:/app/uploads
     ports:

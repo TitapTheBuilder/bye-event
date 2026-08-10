@@ -64,6 +64,25 @@ describe("SyncEngine", () => {
     expect(engine.getStatus()).toBe("idle");
   });
 
+  it("invokes fetch with the global as its receiver, never the engine instance", async () => {
+    // A bare `fetch` stored on an instance field and called as
+    // `this.fetchImpl(...)` runs with the SyncEngine as its receiver, which
+    // browsers reject with "Illegal invocation" -- every flush then died
+    // before the request was sent and every scan sat unsynced forever.
+    let receiver: unknown = "never called";
+    const engine = new SyncEngine(function (this: unknown) {
+      receiver = this;
+      return Promise.resolve(jsonResponse({ results: [{ localId: "a", status: "synced" }] }));
+    } as unknown as typeof fetch);
+    await addOutboxEntry({ localId: "a", qrToken: "tok-1", scannedAt: new Date().toISOString() });
+
+    engine.setAuthenticated(true);
+    await engine.flush();
+
+    expect(receiver).toBe(globalThis);
+    expect(engine.getStatus()).toBe("idle");
+  });
+
   it("drains a scan queued while another flush is in flight", async () => {
     let resolveFirstResponse: ((response: Response) => void) | undefined;
     const firstResponse = new Promise<Response>((resolve) => {
