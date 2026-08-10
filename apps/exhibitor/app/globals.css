@@ -7,22 +7,24 @@
  * table. Never hardcode a specific customer's colors in component code --
  * components should only ever reference these variables/utilities.
  */
+
+/* 1. LIGHT MODE (Default) */
 :root {
-  /* Dark, near-black elevated surface tiers -- not pure #000. The gradient
-     is the accent, this does the heavy lifting. */
-  --surface-0: #08080c;
-  --surface-1: #101018;
-  --surface-2: #191924;
-  --surface-3: #23232f;
-  --border-subtle: #2a2a38;
+  /* Bright, clean surface tiers */
+  --surface-0: #ffffff;
+  --surface-1: #f4f4f5;
+  --surface-2: #e4e4e7;
+  --surface-3: #d4d4d8;
+  --border-subtle: #e4e4e7;
 
-  --text-primary: #f4f4f8;
-  --text-secondary: #a6a6b8;
-  --text-muted: #74748a;
+  /* Dark text for legibility on light backgrounds */
+  --text-primary: #18181b;
+  --text-secondary: #52525b;
+  --text-muted: #a1a1aa;
 
-  --danger: #f87171;
-  --success: #4ade80;
-  --warning: #fbbf24;
+  --danger: #ef4444;
+  --success: #22c55e;
+  --warning: #f59e0b;
 
   /* Neutral placeholders until event_settings loads real brand colors. */
   --brand-primary: #6366f1;
@@ -37,6 +39,24 @@
 
   --radius-card: 1rem;
   --tap-target: 44px;
+}
+
+/* 2. DARK MODE (Activated via next-themes) */
+.dark {
+  /* Dark, near-black elevated surface tiers -- not pure #000. */
+  --surface-0: #08080c;
+  --surface-1: #101018;
+  --surface-2: #191924;
+  --surface-3: #23232f;
+  --border-subtle: #2a2a38;
+
+  --text-primary: #f4f4f8;
+  --text-secondary: #a6a6b8;
+  --text-muted: #74748a;
+
+  --danger: #f87171;
+  --success: #4ade80;
+  --warning: #fbbf24;
 }
 
 @theme inline {
@@ -66,6 +86,10 @@
 
 @layer base {
   html {
+    color-scheme: light;
+  }
+  
+  html.dark {
     color-scheme: dark;
   }
 

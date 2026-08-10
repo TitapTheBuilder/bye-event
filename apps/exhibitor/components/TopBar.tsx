@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { AccountBadge } from "./AccountBadge";
 import { LanguageToggle } from "./LanguageToggle";
+import { ThemeToggle } from "./ThemeToggle";
 
 export function TopBar({
   businessName,
@@ -44,8 +45,10 @@ export function TopBar({
         </Link>
 
         <div className="relative z-10 flex shrink-0 items-center gap-2">
+          <ThemeToggle/>
           <LanguageToggle />
           <AccountBadge />
+
         </div>
       </div>
     </header>
