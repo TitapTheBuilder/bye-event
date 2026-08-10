@@ -29,13 +29,11 @@ export function TopBar({
           />
 
           {logoUrl ? (
-            <Image
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
               src={logoUrl}
               alt={businessName ?? "Event logo"}
-              width={112}
-              height={32}
               className="h-8 w-auto max-w-[112px] shrink-0 object-contain"
-              unoptimized
             />
           ) : businessName ? (
             <span className="truncate text-sm font-semibold text-text-primary">

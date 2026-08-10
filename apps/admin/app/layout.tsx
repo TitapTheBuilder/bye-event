@@ -37,7 +37,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const accent = safeHex(settings.accentColor, "#22d3ee");
 
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${vazirmatn.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} ${vazirmatn.variable}`}>
       <body className="min-h-dvh font-sans antialiased">
         <style>
           {`:root { --brand-primary: ${primary}; --brand-secondary: ${secondary}; --brand-accent: ${accent}; }`}
