@@ -64,7 +64,7 @@ export default function HomePage() {
         onSubmit={handleManualSubmit}
         className="flex w-full max-w-xs flex-col items-center gap-2"
       >
-        <p className="text-sm text-text-secondary">{t("scan.orEnterCode", "Or enter 6-digit code:")}</p>
+        <p className="text-sm text-text-secondary">{t("scan.orEnterCode")}</p>
         <div className="flex w-full items-center gap-2">
           <input
             value={manualToken}
@@ -81,7 +81,7 @@ export default function HomePage() {
             className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
             style={{ background: "var(--brand-gradient)" }}
           >
-            {t("scan.go", "Go")}
+            {t("scan.go")}
           </button>
         </div>
       </form>

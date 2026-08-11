@@ -1,2 +1,2 @@
-ALTER TABLE "visitors" ADD COLUMN "short_code" varchar(10) NOT NULL;--> statement-breakpoint
+ALTER TABLE "visitors" ADD COLUMN "short_code" varchar(10) NOT NULL DEFAULT substring(md5(random()::text), 1, 10);--> statement-breakpoint
 ALTER TABLE "visitors" ADD CONSTRAINT "visitors_short_code_unique" UNIQUE("short_code");

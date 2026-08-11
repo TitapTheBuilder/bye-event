@@ -8,6 +8,7 @@ import { formatGuestBadgeLabel, generateBadgePdf } from "./badges";
 const visitor: Visitor = {
   id: "019c0000-0000-7000-8000-000000000001",
   qrToken: "persian-pdf-test-token",
+  shortCode: "154987",
   firstName: "علی",
   lastName: "رضایی",
   company: "شرکت فناوری تهران",

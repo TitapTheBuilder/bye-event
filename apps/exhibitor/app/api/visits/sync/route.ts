@@ -1,4 +1,4 @@
-import { db, getVisitorByIdentifier, recordVisitSync } from "@repo/db";
+import { db, getVisitorByIdentifier, syncVisitEvent } from "@repo/db";
 import { visitSyncRequestSchema } from "@repo/shared/schemas";
 import type { VisitSyncResponse, VisitSyncResultEntry } from "@repo/shared/schemas";
 import { forbiddenOrigin, isSameOriginRequest, unauthorized } from "@/lib/http";

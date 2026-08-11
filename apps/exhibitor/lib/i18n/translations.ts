@@ -32,6 +32,7 @@ const en = {
 
   // ── Scan ─────────────────────────────────────────────
   "scan.starting": "Starting camera\u2026",
+  "scan.orEnterCode": "Or enter 6-digit code:",
   "scan.denied":
     "Camera access was denied. Allow camera access, or enter a badge code manually below.",
   "scan.httpsRequired":
@@ -131,6 +132,7 @@ const fa: Record<keyof typeof en, string> = {
 
   // ── اسکن ─────────────────────────────────────────────
   "scan.starting": "در حال راه‌اندازی دوربین…",
+  "scan.orEnterCode": "یا کد ۶ رقمی را وارد کنید:",
   "scan.denied":
     "دسترسی دوربین رد شد. دسترسی دوربین را مجاز کنید یا کد نشان را به صورت دستی وارد کنید.",
   "scan.httpsRequired":
