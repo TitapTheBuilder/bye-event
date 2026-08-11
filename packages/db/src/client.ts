@@ -64,7 +64,8 @@ async function ensureTables() {
     await client`
       CREATE TABLE IF NOT EXISTS exhibitors (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-        name varchar(200) NOT NULL,
+        first_name varchar(200) NOT NULL,
+        last_name varchar(200) NOT NULL,
         username varchar(100) UNIQUE NOT NULL,
         password_hash text NOT NULL,
         phone_number varchar(30) UNIQUE NOT NULL,
@@ -76,7 +77,8 @@ async function ensureTables() {
       CREATE TABLE IF NOT EXISTS visitors (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
         qr_token varchar(64) UNIQUE NOT NULL,
-        name varchar(200),
+        first_name varchar(200),
+        last_name varchar(200),
         company varchar(200),
         phone_number varchar(30),
         email varchar(200),

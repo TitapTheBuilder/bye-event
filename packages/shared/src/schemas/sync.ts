@@ -3,7 +3,7 @@ import { z } from "zod";
 /** One outbox entry as flushed by the exhibitor PWA's sync engine. */
 export const visitSyncEntrySchema = z.object({
   localId: z.string().uuid(),
-  qrToken: z.string().trim().min(1).max(64),
+  qrToken: z.string().trim().min(1).max(64).regex(/^[a-zA-Z0-9_-]+$/, "Invalid token format"),
   scannedAt: z.string().datetime(),
 });
 export type VisitSyncEntry = z.infer<typeof visitSyncEntrySchema>;

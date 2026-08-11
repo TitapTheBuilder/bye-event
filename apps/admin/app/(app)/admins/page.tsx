@@ -29,12 +29,17 @@ function AddAdminForm({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
     setIsSubmitting(true);
     try {
       const res = await fetch("/api/admins", {
@@ -78,6 +83,16 @@ function AddAdminForm({
           className={inputClassName}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          minLength={8}
+          required
+        />
+      </FormField>
+      <FormField label="Confirm Password">
+        <input
+          type="password"
+          className={inputClassName}
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
           minLength={8}
           required
         />
