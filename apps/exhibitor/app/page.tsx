@@ -17,13 +17,24 @@ export default function HomePage() {
   const [manualToken, setManualToken] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
-  async function handleManualSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const token = manualToken.trim();
+  async function processToken(token: string) {
     if (token.length !== 6 || isProcessing) return;
     setIsProcessing(true);
     await recordScan(token);
     router.push(`/visitor/${encodeURIComponent(token)}`);
+  }
+
+  function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const newVal = e.target.value.replace(/[^0-9]/g, "").slice(0, 6);
+    setManualToken(newVal);
+    if (newVal.length === 6) {
+      void processToken(newVal);
+    }
+  }
+
+  async function handleManualSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    void processToken(manualToken.trim());
   }
 
   useEffect(() => {
@@ -62,44 +73,22 @@ export default function HomePage() {
 
       <form
         onSubmit={handleManualSubmit}
-        className="flex w-full max-w-xs flex-col items-center gap-2"
+        className="flex w-full max-w-[200px] flex-col items-center gap-3 mx-auto mt-4"
       >
         <p className="text-sm text-text-secondary">{t("scan.orEnterCode")}</p>
-        <div className="flex w-full items-center gap-2">
-          <input
-            value={manualToken}
-            onChange={(e) => setManualToken(e.target.value.replace(/[^0-9]/g, "").slice(0, 6))}
-            placeholder={"000000"}
-            maxLength={6}
-            inputMode="numeric"
-            pattern="[0-9]*"
-            className="flex-1 rounded-xl border border-border-subtle bg-surface-1 px-3 py-2.5 text-center text-lg font-mono text-text-primary placeholder:text-text-muted tracking-widest focus:outline-none focus:ring-2 focus:ring-border-subtle"
-          />
-          <button
-            type="submit"
-            disabled={isProcessing || manualToken.trim().length !== 6}
-            className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
-            style={{ background: "var(--brand-gradient)" }}
-          >
-            {t("scan.go")}
-          </button>
-        </div>
+        <input
+          value={manualToken}
+          onChange={handleInputChange}
+          placeholder={"000000"}
+          maxLength={6}
+          inputMode="numeric"
+          pattern="[0-9]*"
+          disabled={isProcessing}
+          className="w-full rounded-full border border-border-subtle bg-surface-1 px-4 py-2.5 text-center text-lg font-mono text-text-primary placeholder:text-text-muted tracking-widest focus:outline-none focus:ring-2 focus:ring-border-subtle disabled:opacity-50"
+        />
       </form>
 
-      <Link
-        href="/scanned"
-        className="flex items-center gap-2 rounded-full border border-border-subtle bg-surface-1 px-4 py-2.5 text-sm font-medium text-text-primary hover:bg-surface-2"
-      >
-        {t("home.scannedVisitors")}
-        {scannedCount !== null && scannedCount > 0 ? (
-          <span
-            className="flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-semibold text-white"
-            style={{ background: "var(--brand-gradient)" }}
-          >
-            {scannedCount}
-          </span>
-        ) : null}
-      </Link>
+
     </div>
   );
 }

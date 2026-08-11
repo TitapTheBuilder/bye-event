@@ -87,6 +87,7 @@ export interface ScannedVisitorRow {
   email: string | null;
   visitorType: "invited" | "guest";
   qrToken: string;
+  shortCode: string | null;
   scanCount: number;
   lastScannedAt: Date;
   createdAt: Date;
@@ -119,6 +120,7 @@ export async function listVisitsForExhibitor(
       email: visitors.email,
       visitorType: visitors.visitorType,
       qrToken: visitors.qrToken,
+      shortCode: visitors.shortCode,
       scanCount: visits.scanCount,
       lastScannedAt: visits.lastScannedAt,
       createdAt: visits.createdAt,

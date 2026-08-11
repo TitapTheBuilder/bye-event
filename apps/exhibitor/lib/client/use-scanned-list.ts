@@ -35,6 +35,7 @@ interface ServerVisitRow {
   email: string | null;
   visitorType: "invited" | "guest";
   qrToken: string;
+  shortCode: string | null;
   scanCount: number;
   lastScannedAt: string;
   createdAt: string;
@@ -59,6 +60,7 @@ export function useScannedList() {
             const data = (await res.json()) as { visits: ServerVisitRow[] };
             for (const row of data.visits) {
               seenQrTokens.add(row.qrToken.trim());
+              if (row.shortCode) seenQrTokens.add(row.shortCode.trim());
               merged.push({
                 key: row.visitorId,
                 qrToken: row.qrToken,
