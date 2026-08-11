@@ -3,7 +3,6 @@
 import { useEffect } from "react";
 import { formatPersonName, getPersonInitials } from "@repo/shared/person-name";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 import { SyncStatusChip } from "@/components/SyncStatusChip";
 import { useAuth } from "@/lib/client/auth-context";
 import { useTranslation } from "@/lib/client/language-context";
@@ -25,11 +24,7 @@ export default function ProfilePage() {
     return <p className="px-6 py-8 text-sm text-text-secondary">{t("common.loading")}</p>;
   }
 
-  useEffect(() => {
-    if (!isLoading && !exhibitor) {
-      router.replace("/login?next=/profile");
-    }
-  }, [exhibitor, isLoading, router]);
+
 
   if (!exhibitor) {
     return null;

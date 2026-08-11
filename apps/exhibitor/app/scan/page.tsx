@@ -18,8 +18,6 @@ export default function ScanPage() {
   const [cameraState, setCameraState] = useState<CameraState>("starting");
   const [hasFlash, setHasFlash] = useState(false);
   const [flashOn, setFlashOn] = useState(false);
-  const [manualToken, setManualToken] = useState("");
-  const [isProcessing, setIsProcessing] = useState(false);
 
   const handleDecoded = useCallback(
     async (rawQrToken: string) => {
@@ -29,7 +27,6 @@ export default function ScanPage() {
       // QR decoders can emit multiple callbacks before stop() settles. React
       // state updates are asynchronous, so use a ref as the synchronous lock.
       processingRef.current = true;
-      setIsProcessing(true);
       const scanner = scannerRef.current;
       scanner?.pause(true);
       scanner?.destroy();
@@ -117,13 +114,6 @@ export default function ScanPage() {
     };
   }, [handleDecoded]);
 
-  async function handleManualSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const token = manualToken.trim();
-    if (!token) return;
-    await handleDecoded(token);
-  }
-
   async function toggleFlash() {
     if (!scannerRef.current) return;
     await scannerRef.current.toggleFlash();
@@ -183,29 +173,6 @@ export default function ScanPage() {
           </button>
         ) : null}
       </div>
-
-      <form
-        onSubmit={handleManualSubmit}
-        className="flex items-center gap-2 border-t border-border-subtle px-6 py-4"
-      >
-        <input
-          value={manualToken}
-          onChange={(e) => setManualToken(e.target.value.replace(/[^0-9]/g, "").slice(0, 6))}
-          placeholder={"6-digit code"}
-          maxLength={6}
-          inputMode="numeric"
-          pattern="[0-9]*"
-          className="flex-1 rounded-xl border border-border-subtle bg-surface-1 px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted"
-        />
-        <button
-          type="submit"
-          disabled={isProcessing || manualToken.trim().length !== 6}
-          className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
-          style={{ background: "var(--brand-gradient)" }}
-        >
-          {t("scan.go")}
-        </button>
-      </form>
     </div>
   );
 }
