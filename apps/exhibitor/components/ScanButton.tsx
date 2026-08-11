@@ -14,6 +14,7 @@ export function ScanButton() {
       style={{ background: "var(--brand-gradient)" }}
     >
       <svg width="72" height="72" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <title>Scan badge</title>
         <path
           d="M4 8V5a1 1 0 0 1 1-1h3M20 8V5a1 1 0 0 0-1-1h-3M4 16v3a1 1 0 0 0 1 1h3M20 16v3a1 1 0 0 1-1 1h-3"
           stroke="white"

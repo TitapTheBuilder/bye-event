@@ -1,4 +1,13 @@
-import { createSessionToken, verifySessionToken } from "@repo/shared/auth";
+import {
+  bumpAdminSessionVersion,
+  db,
+  getAdminSessionState,
+} from "@repo/db";
+import {
+  createSessionToken,
+  requireSessionSecret,
+  verifySessionToken,
+} from "@repo/shared/auth/session";
 import { ADMIN_SESSION_COOKIE, ADMIN_SESSION_TTL_SECONDS } from "@repo/shared/constants";
 import { cookies } from "next/headers";
 
@@ -10,11 +19,7 @@ export class UnauthorizedError extends Error {
 }
 
 function getSessionSecret(): string {
-  const secret = process.env.SESSION_SECRET;
-  if (!secret) {
-    throw new Error("SESSION_SECRET is not set");
-  }
-  return secret;
+  return requireSessionSecret(process.env.ADMIN_SESSION_SECRET, "ADMIN_SESSION_SECRET");
 }
 
 export interface AdminSession {
@@ -29,9 +34,12 @@ export interface AdminSession {
  * role "admin" so an exhibitor token can never be accepted here or vice
  * versa.
  */
-export async function createAdminSession(adminId: string): Promise<void> {
+export async function createAdminSession(
+  adminId: string,
+  sessionVersion: number,
+): Promise<void> {
   const token = await createSessionToken(
-    { sub: adminId, role: "admin" },
+    { sub: adminId, role: "admin", sessionVersion },
     getSessionSecret(),
     ADMIN_SESSION_TTL_SECONDS,
   );
@@ -46,6 +54,11 @@ export async function createAdminSession(adminId: string): Promise<void> {
 }
 
 export async function clearAdminSession(): Promise<void> {
+  const session = await getAdminSession();
+  if (session) {
+    await bumpAdminSessionVersion(db, session.adminId);
+  }
+
   const store = await cookies();
   store.delete(ADMIN_SESSION_COOKIE);
 }
@@ -57,6 +70,9 @@ export async function getAdminSession(): Promise<AdminSession | null> {
 
   const verified = await verifySessionToken(token, getSessionSecret(), "admin");
   if (!verified) return null;
+
+  const state = await getAdminSessionState(db, verified.sub);
+  if (!state || state.sessionVersion !== verified.sessionVersion) return null;
 
   return { adminId: verified.sub };
 }

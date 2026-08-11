@@ -7,3 +7,4 @@ export * from "./admins";
 export * from "./event-settings";
 export * from "./uploads";
 export * from "./dashboard";
+export * from "./rate-limit";

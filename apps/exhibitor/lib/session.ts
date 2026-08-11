@@ -1,4 +1,13 @@
-import { createSessionToken, verifySessionToken } from "@repo/shared/auth";
+import {
+  bumpExhibitorSessionVersion,
+  db,
+  getExhibitorSessionState,
+} from "@repo/db";
+import {
+  createSessionToken,
+  requireSessionSecret,
+  verifySessionToken,
+} from "@repo/shared/auth/session";
 import { EXHIBITOR_SESSION_COOKIE, EXHIBITOR_SESSION_TTL_SECONDS } from "@repo/shared/constants";
 import { cookies } from "next/headers";
 
@@ -10,11 +19,7 @@ export class UnauthorizedError extends Error {
 }
 
 function getSessionSecret(): string {
-  const secret = process.env.SESSION_SECRET;
-  if (!secret) {
-    throw new Error("SESSION_SECRET is not set");
-  }
-  return secret;
+  return requireSessionSecret(process.env.EXHIBITOR_SESSION_SECRET, "EXHIBITOR_SESSION_SECRET");
 }
 
 export interface ExhibitorSession {
@@ -22,9 +27,12 @@ export interface ExhibitorSession {
 }
 
 /** Sets the HttpOnly + Secure + SameSite=Lax session cookie after a successful login/signup. */
-export async function createExhibitorSession(exhibitorId: string): Promise<void> {
+export async function createExhibitorSession(
+  exhibitorId: string,
+  sessionVersion: number,
+): Promise<void> {
   const token = await createSessionToken(
-    { sub: exhibitorId, role: "exhibitor" },
+    { sub: exhibitorId, role: "exhibitor", sessionVersion },
     getSessionSecret(),
     EXHIBITOR_SESSION_TTL_SECONDS,
   );
@@ -39,6 +47,11 @@ export async function createExhibitorSession(exhibitorId: string): Promise<void>
 }
 
 export async function clearExhibitorSession(): Promise<void> {
+  const session = await getExhibitorSession();
+  if (session) {
+    await bumpExhibitorSessionVersion(db, session.exhibitorId);
+  }
+
   const store = await cookies();
   store.delete(EXHIBITOR_SESSION_COOKIE);
 }
@@ -51,6 +64,15 @@ export async function getExhibitorSession(): Promise<ExhibitorSession | null> {
 
   const verified = await verifySessionToken(token, getSessionSecret(), "exhibitor");
   if (!verified) return null;
+
+  const state = await getExhibitorSessionState(db, verified.sub);
+  if (
+    !state ||
+    state.deactivatedAt !== null ||
+    state.sessionVersion !== verified.sessionVersion
+  ) {
+    return null;
+  }
 
   return { exhibitorId: verified.sub };
 }

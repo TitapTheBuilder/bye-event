@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { parseVisitorImportFile } from "./import";
+import * as XLSX from "xlsx";
+import {
+  MAX_IMPORT_CELL_CHARS,
+  MAX_IMPORT_COLUMNS,
+  MAX_IMPORT_FILE_BYTES,
+  MAX_IMPORT_ROWS,
+  parseVisitorImportFile,
+} from "./import";
 
 function csvBuffer(text: string): Buffer {
   return Buffer.from(text, "utf-8");
@@ -82,5 +89,56 @@ describe("parseVisitorImportFile", () => {
     expect(result.rows).toHaveLength(1);
     expect(result.validCount).toBe(1);
     expect(result.rows[0]?.data).toMatchObject({ company: "Acme" });
+  });
+
+  it("parses XLSX files after checking their ZIP signature", () => {
+    const sheet = XLSX.utils.json_to_sheet([{ "first name": "Ada", email: "ada@example.com" }]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, sheet, "Visitors");
+    const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;
+
+    const result = parseVisitorImportFile(buffer, "visitors.xlsx");
+
+    expect(result.validCount).toBe(1);
+    expect(result.rows[0]?.data?.firstName).toBe("Ada");
+  });
+
+  it("rejects spreadsheet extensions whose signatures do not match", () => {
+    expect(() => parseVisitorImportFile(csvBuffer("first name\nAda\n"), "visitors.xlsx")).toThrow(
+      /signature/,
+    );
+  });
+
+  it("rejects previews over the row limit", () => {
+    const rows = Array.from({ length: MAX_IMPORT_ROWS + 1 }, (_, index) => `Visitor ${index}`);
+    const csv = ["first name", ...rows].join("\n");
+
+    expect(() => parseVisitorImportFile(csvBuffer(csv), "visitors.csv")).toThrow(/rows/);
+  });
+
+  it("rejects previews over the column limit", () => {
+    const headers = Array.from({ length: MAX_IMPORT_COLUMNS + 1 }, (_, index) => `column-${index}`);
+    const csv = `${headers.join(",")}\n${headers.map(() => "value").join(",")}\n`;
+
+    expect(() => parseVisitorImportFile(csvBuffer(csv), "visitors.csv")).toThrow(/columns/);
+  });
+
+  it("counts CSV cells beyond the declared headers", () => {
+    const values = Array.from({ length: MAX_IMPORT_COLUMNS + 1 }, () => "value");
+    const csv = `first name\n${values.join(",")}\n`;
+
+    expect(() => parseVisitorImportFile(csvBuffer(csv), "visitors.csv")).toThrow(/columns/);
+  });
+
+  it("rejects oversized cells", () => {
+    const csv = `company\n${"a".repeat(MAX_IMPORT_CELL_CHARS + 1)}\n`;
+
+    expect(() => parseVisitorImportFile(csvBuffer(csv), "visitors.csv")).toThrow(/cells/);
+  });
+
+  it("enforces the file byte limit inside the parser", () => {
+    expect(() =>
+      parseVisitorImportFile(Buffer.alloc(MAX_IMPORT_FILE_BYTES + 1, "a"), "visitors.csv"),
+    ).toThrow(/too large/);
   });
 });

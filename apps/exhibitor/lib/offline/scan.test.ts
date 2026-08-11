@@ -17,6 +17,7 @@ describe("recordScan", () => {
     expect(entries).toHaveLength(1);
     expect(entries[0]?.localId).toBe(localId);
     expect(entries[0]?.qrToken).toBe("tok-1");
+    expect(entries[0]?.ownerExhibitorId).toBeNull();
     expect(entries[0]?.synced).toBe(false);
     expect(requestFlushSpy).toHaveBeenCalled();
 

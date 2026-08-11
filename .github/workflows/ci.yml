@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: exhibition
+          POSTGRES_PASSWORD: exhibition
+          POSTGRES_DB: exhibition
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U exhibition -d exhibition"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://exhibition:exhibition@localhost:5432/exhibition
+      MIGRATION_DATABASE_URL: postgres://exhibition:exhibition@localhost:5432/exhibition
+      ADMIN_SESSION_SECRET: ci-admin-session-secret-at-least-32-characters
+      EXHIBITOR_SESSION_SECRET: ci-exhibitor-session-secret-at-least-32-characters
+      ADMIN_PUBLIC_ORIGIN: https://admin.example.test
+      EXHIBITOR_PUBLIC_ORIGIN: https://exhibitor.example.test
+      TRUST_PROXY: "1"
+      ALLOW_INSECURE_DATABASE: "1"
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Enable pnpm
+        run: corepack enable && corepack prepare pnpm@11.18.0 --activate
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Apply database migrations
+        run: pnpm db:migrate
+      - name: Lint
+        run: pnpm lint
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Test
+        run: pnpm test
+      - name: Build
+        run: pnpm build
+      - name: Check production Compose
+        run: >-
+          EXHIBITOR_DATABASE_URL=postgres://example.invalid/exhibition?sslmode=verify-full
+          ADMIN_DATABASE_URL=postgres://example.invalid/exhibition?sslmode=verify-full
+          MIGRATION_DATABASE_URL=postgres://example.invalid/exhibition?sslmode=verify-full
+          ADMIN_SESSION_SECRET=ci-admin-session-secret-at-least-32-characters
+          EXHIBITOR_SESSION_SECRET=ci-exhibitor-session-secret-at-least-32-characters
+          EXHIBITOR_DOMAIN=exhibitor.example.test
+          ADMIN_DOMAIN=admin.example.test
+          ADMIN_ALLOWED_CIDRS=127.0.0.1/32
+          ACME_EMAIL=security@example.test
+          docker compose -f compose.production.yml config --quiet

@@ -1,6 +1,6 @@
 import { db, listAllVisitsForExport, listAllVisitorsForExport, listExhibitors } from "@repo/db";
 import { exportQuerySchema } from "@repo/shared/schemas";
-import { serializeExport, toExportRows } from "@/lib/export";
+import { MAX_EXPORT_RECORDS, serializeExport, toExportRows } from "@/lib/export";
 import { unauthorized } from "@/lib/http";
 import { requireAdminSession, UnauthorizedError } from "@/lib/session";
 import { NextResponse } from "next/server";
@@ -31,12 +31,24 @@ export async function GET(request: Request) {
   const includeDeactivated = searchParams.get("includeDeactivated") === "true";
   const { entity, format } = parsed.data;
 
-  const rows = toExportRows(entity, {
-    visitors: entity === "visitors" ? await listAllVisitorsForExport(db, { includeDeactivated }) : undefined,
-    exhibitors: entity === "exhibitors" ? await listExhibitors(db, { includeDeactivated }) : undefined,
+  const data = {
+    visitors:
+      entity === "visitors"
+        ? await listAllVisitorsForExport(db, { includeDeactivated })
+        : undefined,
+    exhibitors:
+      entity === "exhibitors" ? await listExhibitors(db, { includeDeactivated }) : undefined,
     visits: entity === "visits" ? await listAllVisitsForExport(db) : undefined,
-  });
+  };
+  const recordCount = data.visitors?.length ?? data.exhibitors?.length ?? data.visits?.length ?? 0;
+  if (recordCount > MAX_EXPORT_RECORDS) {
+    return NextResponse.json(
+      { error: `Export cannot contain more than ${MAX_EXPORT_RECORDS} records` },
+      { status: 413 },
+    );
+  }
 
+  const rows = toExportRows(entity, data);
   const { body, contentType, filename } = serializeExport(entity, format, rows);
   const bodyBytes = typeof body === "string" ? body : new Uint8Array(body);
 
@@ -44,6 +56,7 @@ export async function GET(request: Request) {
     headers: {
       "Content-Type": contentType,
       "Content-Disposition": `attachment; filename="${filename}"`,
+      "Cache-Control": "private, no-store",
     },
   });
 }

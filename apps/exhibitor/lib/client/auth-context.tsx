@@ -38,15 +38,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
+    syncEngine.setAuthenticated(null);
     (async () => {
       try {
         const res = await fetch("/api/auth/me");
         const data = (await res.json()) as { exhibitor: ExhibitorProfile | null };
         if (cancelled) return;
         setExhibitor(data.exhibitor);
-        // On load, tell the sync engine whether we're authenticated so it
-        // knows whether it's allowed to flush anything it finds queued.
-        syncEngine.setAuthenticated(Boolean(data.exhibitor));
+        // Ownership and sync authorization are tied to the concrete account,
+        // not a process-wide authenticated boolean.
+        syncEngine.setAuthenticated(data.exhibitor?.id ?? null);
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -67,9 +68,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const data = await res.json();
     if (!res.ok) return { ok: false as const, error: data.error ?? "Login failed" };
     setExhibitor(data.exhibitor);
-    // Immediately flush the entire outbox, including everything
-    // accumulated before this account existed on this device.
-    syncEngine.setAuthenticated(true);
+    // Claim and flush unowned entries plus entries already owned by this account.
+    syncEngine.setAuthenticated(data.exhibitor.id);
     return { ok: true as const };
   }, []);
 
@@ -89,7 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const data = await res.json();
       if (!res.ok) return { ok: false as const, error: data.error ?? "Sign up failed" };
       setExhibitor(data.exhibitor);
-      syncEngine.setAuthenticated(true);
+      syncEngine.setAuthenticated(data.exhibitor.id);
       return { ok: true as const };
     },
     [],
@@ -99,10 +99,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Give pending scans one final chance while the session still exists.
     // Any entries that remain unsynced are preserved for a later retry.
     await syncEngine.flush();
-    await fetch("/api/auth/logout", { method: "POST" });
-    syncEngine.setAuthenticated(false);
-    await clearScannerDataAfterLogout();
-    setExhibitor(null);
+    syncEngine.setAuthenticated(null);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } finally {
+      await clearScannerDataAfterLogout();
+      setExhibitor(null);
+    }
   }, []);
 
   const value = useMemo(

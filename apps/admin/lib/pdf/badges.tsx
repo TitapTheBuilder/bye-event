@@ -306,19 +306,23 @@ export interface GenerateBadgePdfOptions {
 export async function generateBadgePdf(options: GenerateBadgePdfOptions): Promise<Buffer> {
   const { visitorType, visitors, eventSettings } = options;
 
-  const qrEntries = await Promise.all(
-    visitors.map(
-      async (visitor) => [visitor.qrToken, await makeQrDataUrl(visitor.qrToken)] as const,
-    ),
-  );
+  const qrEntries: Array<readonly [string, string]> = [];
+  const qrConcurrency = 16;
+  for (let index = 0; index < visitors.length; index += qrConcurrency) {
+    const batch = await Promise.all(
+      visitors
+        .slice(index, index + qrConcurrency)
+        .map(async (visitor) => [visitor.qrToken, await makeQrDataUrl(visitor.qrToken)] as const),
+    );
+    qrEntries.push(...batch);
+  }
   const qrDataUrls = new Map(qrEntries);
 
   // Embed local uploads so PDF generation does not depend on an HTTP
   // round-trip and remains portable across Windows and Linux paths.
   const localLogoPath = getLocalUploadPathFromUrl(eventSettings.logoUrl);
-  const logoSource = localLogoPath
-    ? await embedLocalLogo(localLogoPath)
-    : (eventSettings.logoUrl ?? undefined);
+  // Never let a legacy/external branding URL trigger a server-side fetch.
+  const logoSource = localLogoPath ? await embedLocalLogo(localLogoPath) : undefined;
 
   const props: BadgeDocumentProps = {
     visitors,

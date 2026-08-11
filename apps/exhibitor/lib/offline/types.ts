@@ -21,6 +21,8 @@ export interface OutboxEntry {
   qrToken: string;
   /** ISO timestamp of when the scan actually happened on-device. */
   scannedAt: string;
+  /** Missing values are legacy records and are treated as unowned. */
+  ownerExhibitorId?: string | null;
   synced: boolean;
   /** Set once the server has told us this entry can never succeed (e.g. an
    * unrecognized qr_token) so the auto-sync loop stops hammering it. The

@@ -1,57 +1,62 @@
-import { verifySessionToken } from "@repo/shared/auth";
+import { verifySessionToken } from "@repo/shared/auth/session";
 import { EXHIBITOR_SESSION_COOKIE } from "@repo/shared/constants";
 import { type NextRequest, NextResponse } from "next/server";
 
-// Basic in-memory rate limiting map for Node runtime (IP -> timestamps)
-// In production, use Upstash Redis for distributed rate limiting.
-const rateLimitMap = new Map<string, number[]>();
-const MAX_REQUESTS = 10000;
-const WINDOW_MS = 60 * 1000; // 1 minute
-
 const AUTH_REQUIRED_PREFIXES = ["/scanned", "/profile"];
 
-export async function proxy(request: NextRequest) {
-  const ip = request.headers.get("x-forwarded-for") || "unknown";
-  
-  // 1. Rate Limiting Logic
-  const now = Date.now();
-  const windowStart = now - WINDOW_MS;
-  const requests = (rateLimitMap.get(ip) || []).filter(timestamp => timestamp > windowStart);
-  requests.push(now);
-  rateLimitMap.set(ip, requests);
+function createContentSecurityPolicy(nonce: string): string {
+  const developmentEval = process.env.NODE_ENV === "production" ? "" : " 'unsafe-eval'";
+  return [
+    "default-src 'self'",
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval'${developmentEval}`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob:",
+    "font-src 'self'",
+    "connect-src 'self'",
+    "worker-src 'self' blob:",
+    "media-src 'self' blob:",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    "manifest-src 'self'",
+  ].join("; ");
+}
 
-  if (requests.length > MAX_REQUESTS) {
-    return new NextResponse("Too Many Requests", { status: 429 });
+function secureResponse(response: NextResponse, pathname: string, csp: string): NextResponse {
+  response.headers.set("Content-Security-Policy", csp);
+  if (pathname.startsWith("/api/")) {
+    response.headers.set("Cache-Control", "private, no-store, max-age=0");
   }
+  return response;
+}
 
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const nonce = btoa(crypto.randomUUID());
+  const csp = createContentSecurityPolicy(nonce);
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-nonce", nonce);
+  requestHeaders.set("Content-Security-Policy", csp);
 
-  const requiresAuthUi = AUTH_REQUIRED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
-  
-  let response = NextResponse.next();
+  let response = NextResponse.next({ request: { headers: requestHeaders } });
+  const requiresAuthUi = AUTH_REQUIRED_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
 
   if (requiresAuthUi) {
     const token = request.cookies.get(EXHIBITOR_SESSION_COOKIE)?.value;
-    const secret = process.env.SESSION_SECRET;
+    const secret = process.env.EXHIBITOR_SESSION_SECRET;
     const verified = token && secret ? await verifySessionToken(token, secret, "exhibitor") : null;
 
     if (!verified) {
-      if (pathname.startsWith("/api/")) {
-        response = NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      } else {
-        const loginUrl = new URL("/login", request.url);
-        loginUrl.searchParams.set("next", pathname);
-        response = NextResponse.redirect(loginUrl);
-      }
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("next", pathname);
+      response = NextResponse.redirect(loginUrl);
     }
   }
 
-  // 2. Strict CORS Policy
-  response.headers.set("Access-Control-Allow-Origin", "https://your-production-domain.com");
-  response.headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
-
-  return response;
+  return secureResponse(response, pathname, csp);
 }
 
 export const config = {

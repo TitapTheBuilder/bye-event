@@ -3,7 +3,10 @@ import { formatPersonName } from "@repo/shared/person-name";
 import { NextResponse } from "next/server";
 import { unauthorized } from "@/lib/http";
 import { generateScannedVisitorsPdf } from "@/lib/pdf/scanned-visitors";
-import { serializeScannedVisitorsCsv } from "@/lib/scanned-export";
+import {
+  MAX_SCANNED_EXPORT_RECORDS,
+  serializeScannedVisitorsCsv,
+} from "@/lib/scanned-export";
 import { requireExhibitorSession, UnauthorizedError } from "@/lib/session";
 
 export const runtime = "nodejs";
@@ -26,6 +29,13 @@ export async function GET(request: Request) {
     listVisitsForExhibitor(db, session.exhibitorId),
     getExhibitorById(db, session.exhibitorId),
   ]);
+  if (rows.length > MAX_SCANNED_EXPORT_RECORDS) {
+    return NextResponse.json(
+      { error: `Export cannot contain more than ${MAX_SCANNED_EXPORT_RECORDS} records` },
+      { status: 413 },
+    );
+  }
+
   const date = new Date().toISOString().slice(0, 10);
   const filename = `scanned-visitors-${date}.${format}`;
 
@@ -34,6 +44,7 @@ export async function GET(request: Request) {
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
         "Content-Disposition": `attachment; filename="${filename}"`,
+        "Cache-Control": "private, no-store",
       },
     });
   }
@@ -46,6 +57,7 @@ export async function GET(request: Request) {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="${filename}"`,
+      "Cache-Control": "private, no-store",
     },
   });
 }

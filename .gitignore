@@ -4,6 +4,7 @@ node_modules/
 # Build outputs
 .next/
 dist/
+out/
 *.tsbuildinfo
 
 # Turborepo
@@ -17,9 +18,13 @@ packages/db/drizzle/
 
 # Env files
 .env
-.env.local
-.env.*.local
+.env.*
+**/.env
+**/.env.*
 !.env.example
+!.env.*.example
+!**/.env.example
+!**/.env.*.example
 
 # Local uploads (dev fallback storage)
 .uploads/

@@ -6,6 +6,7 @@ import { requireAdminSession, UnauthorizedError } from "@/lib/session";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
+export const MAX_BADGE_RECORDS = 1000;
 
 /**
  * Print-ready badge PDF export (§7): two distinct templates (invited:
@@ -24,6 +25,17 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json().catch(() => null);
+  const requestedVisitorIds =
+    body && typeof body === "object" && "visitorIds" in body
+      ? (body as { visitorIds?: unknown }).visitorIds
+      : undefined;
+  if (Array.isArray(requestedVisitorIds) && requestedVisitorIds.length > MAX_BADGE_RECORDS) {
+    return NextResponse.json(
+      { error: `Badge export cannot contain more than ${MAX_BADGE_RECORDS} visitors` },
+      { status: 413 },
+    );
+  }
+
   const parsed = badgeExportSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid input", issues: parsed.error.issues }, { status: 400 });
@@ -33,6 +45,13 @@ export async function POST(request: Request) {
   const visitors = visitorIds
     ? (await getVisitorsByIds(db, visitorIds)).filter((v) => v.visitorType === visitorType)
     : await listAllVisitorsForExport(db, { visitorType });
+
+  if (visitors.length > MAX_BADGE_RECORDS) {
+    return NextResponse.json(
+      { error: `Badge export cannot contain more than ${MAX_BADGE_RECORDS} visitors` },
+      { status: 413 },
+    );
+  }
 
   if (visitors.length === 0) {
     return NextResponse.json({ error: "No matching visitors to generate badges for" }, { status: 400 });
@@ -45,6 +64,7 @@ export async function POST(request: Request) {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="${visitorType}-badges.pdf"`,
+      "Cache-Control": "private, no-store",
     },
   });
 }

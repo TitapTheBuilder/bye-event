@@ -8,6 +8,9 @@ export function FormField({
   error?: string;
 }) {
   return (
+    // The supplied child is always the wrapped form control; Biome cannot
+    // infer that association through the ReactNode prop.
+    // biome-ignore lint/a11y/noLabelWithoutControl: control is supplied as children
     <label className="flex flex-col gap-1.5 text-left">
       <span className="text-sm font-medium text-text-secondary">{label}</span>
       {children}

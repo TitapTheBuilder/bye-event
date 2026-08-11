@@ -2,6 +2,8 @@
 
 This repository contains the Exhibition System, consisting of two Next.js applications (`apps/exhibitor` and `apps/admin`) sharing a single Postgres database (`packages/db`).
 
+Before an internet-facing release, complete the [Production Security Release Checklist](docs/production-security-checklist.md). Its P0 items are launch blockers for both applications.
+
 ## Prerequisites
 
 - **Node.js**: >= 22

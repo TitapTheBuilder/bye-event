@@ -1,0 +1,33 @@
+{
+  email {$ACME_EMAIL}
+  admin off
+}
+
+{$EXHIBITOR_DOMAIN} {
+  encode zstd gzip
+  request_body {
+    max_size 12MB
+  }
+  reverse_proxy exhibitor:3000 {
+    header_up X-Forwarded-For {remote_host}
+    header_up X-Forwarded-Host {host}
+    header_up X-Forwarded-Proto {scheme}
+  }
+}
+
+{$ADMIN_DOMAIN} {
+  @blocked {
+    not remote_ip {$ADMIN_ALLOWED_CIDRS}
+  }
+  respond @blocked "Forbidden" 403
+
+  encode zstd gzip
+  request_body {
+    max_size 12MB
+  }
+  reverse_proxy admin:3000 {
+    header_up X-Forwarded-For {remote_host}
+    header_up X-Forwarded-Host {host}
+    header_up X-Forwarded-Proto {scheme}
+  }
+}

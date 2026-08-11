@@ -1,4 +1,4 @@
-import { db, deleteAdmin, listAdmins } from "@repo/db";
+import { db, deleteAdmin } from "@repo/db";
 import { forbiddenOrigin, isSameOriginRequest, unauthorized } from "@/lib/http";
 import { requireAdminSession, UnauthorizedError } from "@/lib/session";
 import { NextResponse } from "next/server";
@@ -26,11 +26,12 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     return NextResponse.json({ error: "You cannot delete your own admin account" }, { status: 400 });
   }
 
-  const admins = await listAdmins(db);
-  if (admins.length <= 1) {
-    return NextResponse.json({ error: "Cannot delete the last remaining admin account" }, { status: 400 });
+  const deleted = await deleteAdmin(db, id);
+  if (!deleted) {
+    return NextResponse.json(
+      { error: "Cannot delete the last remaining or unknown admin account" },
+      { status: 400 },
+    );
   }
-
-  await deleteAdmin(db, id);
   return NextResponse.json({ ok: true });
 }

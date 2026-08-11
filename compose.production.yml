@@ -1,0 +1,139 @@
+name: exhibition-system-production
+
+services:
+  migrate:
+    build:
+      context: .
+      dockerfile: packages/db/Dockerfile
+      args:
+        BASE_IMAGE: ${BASE_IMAGE:-docker.arvancloud.ir/node:22-alpine}
+    environment:
+      MIGRATION_DATABASE_URL: ${MIGRATION_DATABASE_URL:?set MIGRATION_DATABASE_URL}
+    restart: "no"
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    networks: [backend]
+
+  exhibitor:
+    build:
+      context: .
+      dockerfile: apps/exhibitor/Dockerfile
+      args:
+        BASE_IMAGE: ${BASE_IMAGE:-docker.arvancloud.ir/node:22-alpine}
+    restart: unless-stopped
+    init: true
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: ${EXHIBITOR_DATABASE_URL:?set EXHIBITOR_DATABASE_URL}
+      DATABASE_POOL_SIZE: ${EXHIBITOR_DATABASE_POOL_SIZE:-10}
+      EXHIBITOR_SESSION_SECRET: ${EXHIBITOR_SESSION_SECRET:?set EXHIBITOR_SESSION_SECRET}
+      EXHIBITOR_PUBLIC_ORIGIN: https://${EXHIBITOR_DOMAIN:?set EXHIBITOR_DOMAIN}
+      TRUST_PROXY: "1"
+      ALLOW_INSECURE_DATABASE: ${ALLOW_INSECURE_DATABASE:-0}
+      NODE_ENV: production
+    expose: ["3000"]
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=128m
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    mem_limit: 1g
+    cpus: 1.5
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/api/health/ready || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks: [frontend, backend]
+
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+      args:
+        BASE_IMAGE: ${BASE_IMAGE:-docker.arvancloud.ir/node:22-alpine}
+    restart: unless-stopped
+    init: true
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: ${ADMIN_DATABASE_URL:?set ADMIN_DATABASE_URL}
+      DATABASE_POOL_SIZE: ${ADMIN_DATABASE_POOL_SIZE:-10}
+      ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET:?set ADMIN_SESSION_SECRET}
+      ADMIN_PUBLIC_ORIGIN: https://${ADMIN_DOMAIN:?set ADMIN_DOMAIN}
+      TRUST_PROXY: "1"
+      ALLOW_INSECURE_DATABASE: ${ALLOW_INSECURE_DATABASE:-0}
+      NODE_ENV: production
+      UPLOADS_DIR: /app/uploads
+    expose: ["3000"]
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=256m
+    volumes:
+      - uploads-data:/app/uploads
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    mem_limit: 2g
+    cpus: 2
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/api/health/ready || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks: [frontend, backend]
+
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    init: true
+    depends_on:
+      exhibitor:
+        condition: service_healthy
+      admin:
+        condition: service_healthy
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL}
+      EXHIBITOR_DOMAIN: ${EXHIBITOR_DOMAIN:?set EXHIBITOR_DOMAIN}
+      ADMIN_DOMAIN: ${ADMIN_DOMAIN:?set ADMIN_DOMAIN}
+      ADMIN_ALLOWED_CIDRS: ${ADMIN_ALLOWED_CIDRS:?set ADMIN_ALLOWED_CIDRS}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    read_only: true
+    tmpfs:
+      - /config:rw,noexec,nosuid,size=32m
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    mem_limit: 256m
+    cpus: 0.5
+    networks: [frontend]
+
+networks:
+  frontend:
+  backend:
+    internal: false
+
+volumes:
+  caddy-data:
+  uploads-data:

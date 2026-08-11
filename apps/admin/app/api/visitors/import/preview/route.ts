@@ -1,9 +1,13 @@
-import { parseVisitorImportFile } from "@/lib/import";
+import {
+  ImportFileError,
+  MAX_IMPORT_FILE_BYTES,
+  parseVisitorImportFile,
+} from "@/lib/import";
 import { forbiddenOrigin, isSameOriginRequest, unauthorized } from "@/lib/http";
 import { requireAdminSession, UnauthorizedError } from "@/lib/session";
 import { NextResponse } from "next/server";
 
-const MAX_IMPORT_FILE_BYTES = 10 * 1024 * 1024; // 10MB
+const MAX_MULTIPART_OVERHEAD_BYTES = 1024 * 1024;
 
 /**
  * Step 1 of the bulk visitor import flow (§7): parses + validates the
@@ -22,6 +26,14 @@ export async function POST(request: Request) {
     throw err;
   }
 
+  const contentLength = Number(request.headers.get("content-length"));
+  if (
+    Number.isFinite(contentLength) &&
+    contentLength > MAX_IMPORT_FILE_BYTES + MAX_MULTIPART_OVERHEAD_BYTES
+  ) {
+    return NextResponse.json({ error: "File is too large (max 10MB)" }, { status: 413 });
+  }
+
   const formData = await request.formData().catch(() => null);
   const file = formData?.get("file");
   if (!file || !(file instanceof File)) {
@@ -38,9 +50,14 @@ export async function POST(request: Request) {
   try {
     const result = parseVisitorImportFile(buffer, file.name);
     return NextResponse.json(result);
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { error: "Could not parse file. Please upload a valid CSV or XLSX file." },
+      {
+        error:
+          error instanceof ImportFileError
+            ? error.message
+            : "Could not parse file. Please upload a valid CSV or XLSX file.",
+      },
       { status: 400 },
     );
   }

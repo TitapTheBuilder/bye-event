@@ -43,6 +43,13 @@
       "when": 1786428563950,
       "tag": "0005_spicy_human_fly",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1786451888784,
+      "tag": "0006_tidy_kingpin",
+      "breakpoints": true
     }
   ]
 }

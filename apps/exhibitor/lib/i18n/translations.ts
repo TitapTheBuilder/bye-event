@@ -71,6 +71,10 @@ const en = {
   "profile.syncStatus": "Sync status",
   "profile.pendingScans": "Pending scans",
   "profile.pending": "{count} pending",
+  "profile.clearDeviceData": "Clear device data",
+  "profile.clearDeviceDataHint": "Removes cached visitor details and local app caches.",
+  "profile.clearAfterSync": "Sync pending scans before clearing device data.",
+  "profile.deviceDataCleared": "Device data cleared.",
   "profile.logout": "Log out",
 
   // ── Bottom nav ───────────────────────────────────────
@@ -171,6 +175,10 @@ const fa: Record<keyof typeof en, string> = {
   "profile.syncStatus": "وضعیت همگام‌سازی",
   "profile.pendingScans": "اسکن‌های در انتظار",
   "profile.pending": "{count} در انتظار",
+  "profile.clearDeviceData": "پاک کردن داده‌های دستگاه",
+  "profile.clearDeviceDataHint": "جزئیات ذخیره‌شده بازدیدکنندگان و حافظه موقت برنامه را حذف می‌کند.",
+  "profile.clearAfterSync": "پیش از پاک کردن داده‌ها، اسکن‌های در انتظار را همگام‌سازی کنید.",
+  "profile.deviceDataCleared": "داده‌های دستگاه پاک شد.",
   "profile.logout": "خروج",
 
   // ── منوی پایین ───────────────────────────────────────

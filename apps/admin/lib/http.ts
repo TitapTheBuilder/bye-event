@@ -6,8 +6,15 @@ import { NextResponse } from "next/server";
  * free, but hand-rolled Route Handlers (like every mutating route in this
  * app) do not.
  */
-function firstForwardedValue(value: string | null): string | null {
-  return value?.split(",")[0]?.trim() || null;
+function configuredOrigin(request: Request): string | null {
+  const value = process.env.ADMIN_PUBLIC_ORIGIN;
+  if (!value) return process.env.NODE_ENV === "production" ? null : new URL(request.url).origin;
+
+  try {
+    return new URL(value).origin;
+  } catch {
+    return null;
+  }
 }
 
 export function isSameOriginRequest(request: Request): boolean {
@@ -15,23 +22,17 @@ export function isSameOriginRequest(request: Request): boolean {
   if (!origin) return false;
 
   try {
-    const originUrl = new URL(origin);
-    const requestUrl = new URL(request.url);
-    const allowedOrigins = new Set([requestUrl.origin]);
-
-    const forwardedHost = firstForwardedValue(request.headers.get("x-forwarded-host"));
-    const host = forwardedHost ?? request.headers.get("host");
-    const forwardedProto = firstForwardedValue(request.headers.get("x-forwarded-proto"));
-    const protocol = forwardedProto ?? requestUrl.protocol.replace(":", "");
-    
-    if (host && (protocol === "http" || protocol === "https")) {
-      allowedOrigins.add(`${protocol}://${host}`);
-    }
-
-    return allowedOrigins.has(originUrl.origin);
+    const expected = configuredOrigin(request);
+    return expected !== null && new URL(origin).origin === expected;
   } catch {
     return false;
   }
+}
+
+export function getClientIp(request: Request): string {
+  if (process.env.TRUST_PROXY !== "1") return "direct";
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  return forwardedFor?.split(",")[0]?.trim() || "unknown";
 }
 
 export function forbiddenOrigin(): NextResponse {

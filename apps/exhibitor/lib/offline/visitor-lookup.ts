@@ -13,6 +13,15 @@ export type VisitorLookupResult =
  * failing -- the description page will show "details will load once
  * you're back online".
  */
+async function fetchVisitor(identifier: string): Promise<Response> {
+  return fetch("/api/visitors/lookup", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ identifier }),
+    cache: "no-store",
+  });
+}
+
 export async function resolveVisitor(qrToken: string): Promise<VisitorLookupResult> {
   const cached = await getCachedVisitor(qrToken);
   if (cached) return { status: "found", visitor: cached };
@@ -22,7 +31,7 @@ export async function resolveVisitor(qrToken: string): Promise<VisitorLookupResu
   }
 
   try {
-    const response = await fetch(`/api/visitors/lookup/${encodeURIComponent(qrToken)}`);
+    const response = await fetchVisitor(qrToken);
     if (response.status === 404) return { status: "not-found" };
     if (!response.ok) return { status: "pending-offline" };
 
@@ -40,7 +49,7 @@ export async function resolveVisitor(qrToken: string): Promise<VisitorLookupResu
 /** Re-check a pending-offline visitor once connectivity returns. */
 export async function refreshVisitor(qrToken: string): Promise<VisitorLookupResult> {
   try {
-    const response = await fetch(`/api/visitors/lookup/${encodeURIComponent(qrToken)}`);
+    const response = await fetchVisitor(qrToken);
     if (response.status === 404) return { status: "not-found" };
     if (!response.ok) return { status: "pending-offline" };
     const data = (await response.json()) as { visitor: Omit<CachedVisitor, "cachedAt"> };

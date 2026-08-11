@@ -129,10 +129,7 @@ const styles = StyleSheet.create({
   },
 });
 
-function textStyle(
-  value: string,
-  base: any,
-) {
+function textStyle(value: string, base: Record<string, string | number>) {
   return ARABIC_SCRIPT_PATTERN.test(value) ? [base, styles.rtl] : base;
 }
 

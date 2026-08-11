@@ -1,5 +1,7 @@
 import type { ScannedVisitorRow } from "@repo/db";
 
+export const MAX_SCANNED_EXPORT_RECORDS = 5000;
+
 const CSV_HEADERS = [
   "firstName",
   "lastName",
@@ -13,11 +15,17 @@ const CSV_HEADERS = [
 
 function csvCell(value: string | number | null): string {
   let text = value == null ? "" : String(value);
-  if (/^[=+\-@]/.test(text)) text = `'${text}`;
+  if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
   return `"${text.replaceAll('"', '""')}"`;
 }
 
 export function serializeScannedVisitorsCsv(rows: ScannedVisitorRow[]): string {
+  if (rows.length > MAX_SCANNED_EXPORT_RECORDS) {
+    throw new RangeError(
+      `Export cannot contain more than ${MAX_SCANNED_EXPORT_RECORDS} records`,
+    );
+  }
+
   const lines = [CSV_HEADERS.map(csvCell).join(",")];
   for (const row of rows) {
     lines.push(

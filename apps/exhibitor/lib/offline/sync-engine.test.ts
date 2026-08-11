@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { _clearAllForTests, addOutboxEntry, getAllOutboxEntries } from "./idb";
+import {
+  _clearAllForTests,
+  addOutboxEntry,
+  clearScannerDataAfterLogout,
+  getAllOutboxEntries,
+} from "./idb";
 import { SyncEngine } from "./sync-engine";
 
 function setOnline(value: boolean) {
@@ -36,7 +41,7 @@ describe("SyncEngine", () => {
     setOnline(false);
     const fetchMock = vi.fn();
     const engine = new SyncEngine(fetchMock as unknown as typeof fetch);
-    engine.setAuthenticated(true);
+    engine.setAuthenticated("exhibitor-a");
     await addOutboxEntry({ localId: "a", qrToken: "tok-1", scannedAt: new Date().toISOString() });
 
     await engine.flush();
@@ -52,7 +57,7 @@ describe("SyncEngine", () => {
     const engine = new SyncEngine(fetchMock as unknown as typeof fetch);
     await addOutboxEntry({ localId: "a", qrToken: "tok-1", scannedAt: new Date().toISOString() });
 
-    engine.setAuthenticated(true);
+    engine.setAuthenticated("exhibitor-a");
     await engine.flush();
 
     expect(fetchMock).toHaveBeenCalledWith(
@@ -76,7 +81,7 @@ describe("SyncEngine", () => {
     } as unknown as typeof fetch);
     await addOutboxEntry({ localId: "a", qrToken: "tok-1", scannedAt: new Date().toISOString() });
 
-    engine.setAuthenticated(true);
+    engine.setAuthenticated("exhibitor-a");
     await engine.flush();
 
     expect(receiver).toBe(globalThis);
@@ -95,7 +100,7 @@ describe("SyncEngine", () => {
     const engine = new SyncEngine(fetchMock as unknown as typeof fetch);
     await addOutboxEntry({ localId: "a", qrToken: "tok-1", scannedAt: new Date().toISOString() });
 
-    engine.setAuthenticated(true);
+    engine.setAuthenticated("exhibitor-a");
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
 
     await addOutboxEntry({ localId: "b", qrToken: "tok-2", scannedAt: new Date().toISOString() });
@@ -130,9 +135,9 @@ describe("SyncEngine", () => {
     });
     const engine = new SyncEngine(fetchMock as unknown as typeof fetch);
 
-    // setAuthenticated(true) triggers the flush itself (fire-and-forget);
+    // setAuthenticated(id) triggers the flush itself (fire-and-forget);
     // wait a tick then explicitly flush to make the assertion deterministic.
-    engine.setAuthenticated(true);
+    engine.setAuthenticated("exhibitor-a");
     await engine.flush();
 
     const sentBody = JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string);
@@ -142,6 +147,140 @@ describe("SyncEngine", () => {
     ]);
     const all = await getAllOutboxEntries();
     expect(all.every((e) => e.synced)).toBe(true);
+    expect(all.every((e) => e.ownerExhibitorId === "exhibitor-a")).toBe(true);
+  });
+
+  it("flushes both unowned and current-owner entries", async () => {
+    setOnline(false);
+    const fetchMock = vi.fn().mockImplementation(async (_url, init) => {
+      const body = JSON.parse((init as RequestInit).body as string) as {
+        entries: { localId: string }[];
+      };
+      return jsonResponse({
+        results: body.entries.map((entry) => ({ localId: entry.localId, status: "synced" })),
+      });
+    });
+    const engine = new SyncEngine(fetchMock as unknown as typeof fetch);
+    await addOutboxEntry({
+      localId: "already-owned",
+      qrToken: "tok-owned",
+      scannedAt: "2026-01-01T00:00:00.000Z",
+    });
+    engine.setAuthenticated("exhibitor-a");
+    await engine.flush();
+
+    await addOutboxEntry({
+      localId: "new-unowned",
+      qrToken: "tok-new",
+      scannedAt: "2026-01-01T01:00:00.000Z",
+    });
+    setOnline(true);
+    await engine.flush();
+
+    const sentBody = JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string) as {
+      entries: { localId: string }[];
+    };
+    expect(sentBody.entries.map((entry) => entry.localId).sort()).toEqual([
+      "already-owned",
+      "new-unowned",
+    ]);
+  });
+
+  it("preserves A's unsynced entries without sending them after B logs in", async () => {
+    setOnline(false);
+    const fetchMock = vi.fn().mockImplementation(async (_url, init) => {
+      const body = JSON.parse((init as RequestInit).body as string) as {
+        entries: { localId: string }[];
+      };
+      return jsonResponse({
+        results: body.entries.map((entry) => ({ localId: entry.localId, status: "synced" })),
+      });
+    });
+    const engine = new SyncEngine(fetchMock as unknown as typeof fetch);
+    await addOutboxEntry({
+      localId: "scan-a",
+      qrToken: "tok-a",
+      scannedAt: "2026-01-01T00:00:00.000Z",
+    });
+    engine.setAuthenticated("exhibitor-a");
+    await engine.flush();
+
+    engine.setAuthenticated(null);
+    await clearScannerDataAfterLogout();
+    await addOutboxEntry({
+      localId: "scan-b",
+      qrToken: "tok-b",
+      scannedAt: "2026-01-01T01:00:00.000Z",
+    });
+    setOnline(true);
+    engine.setAuthenticated("exhibitor-b");
+    await engine.flush();
+
+    const sentBody = JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string) as {
+      entries: { localId: string }[];
+    };
+    expect(sentBody.entries.map((entry) => entry.localId)).toEqual(["scan-b"]);
+
+    const byId = new Map((await getAllOutboxEntries()).map((entry) => [entry.localId, entry]));
+    expect(byId.get("scan-a")).toMatchObject({
+      ownerExhibitorId: "exhibitor-a",
+      synced: false,
+    });
+    expect(byId.get("scan-b")).toMatchObject({
+      ownerExhibitorId: "exhibitor-b",
+      synced: true,
+    });
+  });
+
+  it("invalidates an in-flight response before switching accounts", async () => {
+    let resolveFirstResponse: ((response: Response) => void) | undefined;
+    let firstSignal: AbortSignal | null | undefined;
+    const firstResponse = new Promise<Response>((resolve) => {
+      resolveFirstResponse = resolve;
+    });
+    const requestBodies: { entries: { localId: string }[] }[] = [];
+    const fetchMock = vi
+      .fn()
+      .mockImplementationOnce((_url, init) => {
+        firstSignal = (init as RequestInit).signal;
+        requestBodies.push(JSON.parse((init as RequestInit).body as string));
+        return firstResponse;
+      })
+      .mockImplementationOnce(async (_url, init) => {
+        const body = JSON.parse((init as RequestInit).body as string) as {
+          entries: { localId: string }[];
+        };
+        requestBodies.push(body);
+        return jsonResponse({
+          results: body.entries.map((entry) => ({ localId: entry.localId, status: "synced" })),
+        });
+      });
+    const engine = new SyncEngine(fetchMock as unknown as typeof fetch);
+    await addOutboxEntry({
+      localId: "scan-a",
+      qrToken: "tok-a",
+      scannedAt: "2026-01-01T00:00:00.000Z",
+    });
+    engine.setAuthenticated("exhibitor-a");
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+
+    await addOutboxEntry({
+      localId: "scan-b",
+      qrToken: "tok-b",
+      scannedAt: "2026-01-01T01:00:00.000Z",
+    });
+    engine.setAuthenticated("exhibitor-b");
+    expect(firstSignal?.aborted).toBe(true);
+    resolveFirstResponse?.(jsonResponse({ results: [{ localId: "scan-a", status: "synced" }] }));
+    await engine.flush();
+
+    expect(requestBodies.map((body) => body.entries.map((entry) => entry.localId))).toEqual([
+      ["scan-a"],
+      ["scan-b"],
+    ]);
+    const byId = new Map((await getAllOutboxEntries()).map((entry) => [entry.localId, entry]));
+    expect(byId.get("scan-a")?.synced).toBe(false);
+    expect(byId.get("scan-b")?.synced).toBe(true);
   });
 
   it("never sends anything while signed out, then flushes everything on login", async () => {
@@ -154,7 +293,7 @@ describe("SyncEngine", () => {
     await engine.flush();
     expect(fetchMock).not.toHaveBeenCalled();
 
-    engine.setAuthenticated(true);
+    engine.setAuthenticated("exhibitor-a");
     await engine.flush();
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
@@ -163,7 +302,7 @@ describe("SyncEngine", () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 401 }));
     const engine = new SyncEngine(fetchMock as unknown as typeof fetch);
     await addOutboxEntry({ localId: "a", qrToken: "tok-1", scannedAt: new Date().toISOString() });
-    engine.setAuthenticated(true);
+    engine.setAuthenticated("exhibitor-a");
 
     await engine.flush();
 
@@ -185,7 +324,7 @@ describe("SyncEngine", () => {
       initialBackoffMs: 20,
       maxBackoffMs: 100,
     });
-    engine.setAuthenticated(true);
+    engine.setAuthenticated("exhibitor-a");
     await engine.flush();
     await addOutboxEntry({
       localId: "a",
@@ -203,6 +342,27 @@ describe("SyncEngine", () => {
     expect((await getAllOutboxEntries())[0]?.synced).toBe(true);
   });
 
+  it("cancels a scheduled retry on logout", async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new Error("network down"));
+    const engine = new SyncEngine(fetchMock as unknown as typeof fetch, {
+      initialBackoffMs: 20,
+      maxBackoffMs: 100,
+    });
+    await addOutboxEntry({
+      localId: "a",
+      qrToken: "tok-1",
+      scannedAt: new Date().toISOString(),
+    });
+    engine.setAuthenticated("exhibitor-a");
+    await engine.flush();
+
+    engine.setAuthenticated(null);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(engine.getStatus()).toBe("signed-out");
+  });
+
   it("marks a permanently-unresolvable entry (unknown qrToken) so it stops being auto-retried", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       jsonResponse({
@@ -217,7 +377,7 @@ describe("SyncEngine", () => {
       }),
     );
     const engine = new SyncEngine(fetchMock as unknown as typeof fetch);
-    engine.setAuthenticated(true);
+    engine.setAuthenticated("exhibitor-a");
     await engine.flush();
     await addOutboxEntry({ localId: "a", qrToken: "tok-bad", scannedAt: new Date().toISOString() });
 
@@ -249,7 +409,7 @@ describe("SyncEngine", () => {
       initialBackoffMs: 20,
       maxBackoffMs: 100,
     });
-    engine.setAuthenticated(true);
+    engine.setAuthenticated("exhibitor-a");
     await engine.flush();
     await addOutboxEntry({ localId: "a", qrToken: "tok-1", scannedAt: new Date().toISOString() });
 
@@ -271,7 +431,7 @@ describe("SyncEngine", () => {
       .mockResolvedValue(jsonResponse({ results: [{ localId: "a", status: "synced" }] }));
     const engine = new SyncEngine(fetchMock as unknown as typeof fetch);
 
-    engine.setAuthenticated(true);
+    engine.setAuthenticated("exhibitor-a");
     await new Promise((resolve) => setTimeout(resolve, 20));
     await engine.flush();
 
@@ -288,7 +448,7 @@ describe("SyncEngine", () => {
     engine.subscribe((state) => updates.push(state));
 
     await addOutboxEntry({ localId: "a", qrToken: "tok-1", scannedAt: new Date().toISOString() });
-    engine.setAuthenticated(true);
+    engine.setAuthenticated("exhibitor-a");
     await engine.flush();
 
     expect(updates.some((u) => u.status === "syncing")).toBe(true);
@@ -301,7 +461,7 @@ describe("SyncEngine", () => {
       .mockResolvedValue(jsonResponse({ results: [{ localId: "a", status: "synced" }] }));
     const engine = new SyncEngine(fetchMock as unknown as typeof fetch);
     await addOutboxEntry({ localId: "a", qrToken: "tok-1", scannedAt: new Date().toISOString() });
-    engine.setAuthenticated(true);
+    engine.setAuthenticated("exhibitor-a");
 
     await engine.flush();
     expect(fetchMock).toHaveBeenCalledTimes(1);

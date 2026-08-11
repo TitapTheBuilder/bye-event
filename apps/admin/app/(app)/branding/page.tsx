@@ -15,7 +15,7 @@ const HEX_PATTERN = /^#[0-9a-fA-F]{6}$/;
  * change here takes effect without a redeploy.
  */
 export default function BrandingPage() {
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
   const [settings, setSettings] = useState<EventSettings | null>(null);
   const [businessName, setBusinessName] = useState("");
   const [primaryColor, setPrimaryColor] = useState("#6366f1");
@@ -124,13 +124,17 @@ export default function BrandingPage() {
             {isUploading ? t("branding.uploading") : t("branding.uploadLogo")}
             <input
               type="file"
-              accept="image/png,image/jpeg,image/webp,image/svg+xml"
+              accept="image/png,image/jpeg,image/webp"
               onChange={handleLogoChange}
               disabled={isUploading}
               className="hidden"
             />
           </label>
-          <p className="mt-2 text-xs text-text-muted">{t("branding.logoHint")}</p>
+          <p className="mt-2 text-xs text-text-muted">
+            {lang === "fa"
+              ? "PNG، JPEG یا WebP. حداکثر ۵ مگابایت."
+              : "PNG, JPEG, or WebP. Max 5MB."}
+          </p>
         </div>
       </div>
 

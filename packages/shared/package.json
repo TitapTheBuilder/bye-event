@@ -7,6 +7,8 @@
     ".": "./src/index.ts",
     "./schemas": "./src/schemas/index.ts",
     "./auth": "./src/auth/index.ts",
+    "./auth/session": "./src/auth/session.ts",
+    "./auth/password": "./src/auth/password.ts",
     "./constants": "./src/constants.ts",
     "./person-name": "./src/person-name.ts"
   },

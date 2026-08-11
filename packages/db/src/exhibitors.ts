@@ -1,4 +1,4 @@
-import { eq, isNull } from "drizzle-orm";
+import { eq, isNull, sql } from "drizzle-orm";
 import type { Database } from "./client";
 import { type Exhibitor, exhibitors } from "./schema";
 
@@ -40,6 +40,33 @@ export async function getExhibitorById(db: Database, id: string): Promise<Exhibi
   return row;
 }
 
+export async function getExhibitorSessionState(
+  db: Database,
+  id: string,
+): Promise<{ sessionVersion: number; deactivatedAt: Date | null } | undefined> {
+  const [row] = await db
+    .select({
+      sessionVersion: exhibitors.sessionVersion,
+      deactivatedAt: exhibitors.deactivatedAt,
+    })
+    .from(exhibitors)
+    .where(eq(exhibitors.id, id))
+    .limit(1);
+  return row;
+}
+
+export async function bumpExhibitorSessionVersion(
+  db: Database,
+  id: string,
+): Promise<number | undefined> {
+  const [row] = await db
+    .update(exhibitors)
+    .set({ sessionVersion: sql`${exhibitors.sessionVersion} + 1` })
+    .where(eq(exhibitors.id, id))
+    .returning({ sessionVersion: exhibitors.sessionVersion });
+  return row?.sessionVersion;
+}
+
 export async function listExhibitors(
   db: Database,
   options: { includeDeactivated?: boolean } = {},
@@ -50,9 +77,21 @@ export async function listExhibitors(
 
 /** Soft-delete: keeps historical visit analytics intact. */
 export async function deactivateExhibitor(db: Database, id: string): Promise<void> {
-  await db.update(exhibitors).set({ deactivatedAt: new Date() }).where(eq(exhibitors.id, id));
+  await db
+    .update(exhibitors)
+    .set({
+      deactivatedAt: new Date(),
+      sessionVersion: sql`${exhibitors.sessionVersion} + 1`,
+    })
+    .where(eq(exhibitors.id, id));
 }
 
 export async function reactivateExhibitor(db: Database, id: string): Promise<void> {
-  await db.update(exhibitors).set({ deactivatedAt: null }).where(eq(exhibitors.id, id));
+  await db
+    .update(exhibitors)
+    .set({
+      deactivatedAt: null,
+      sessionVersion: sql`${exhibitors.sessionVersion} + 1`,
+    })
+    .where(eq(exhibitors.id, id));
 }

@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   _clearAllForTests,
+  _deleteDatabaseForTests,
   addOutboxEntry,
   cacheVisitor,
+  claimUnownedOutboxEntries,
   clearAllOutboxEntryErrors,
   clearOutboxEntryError,
   clearScannerDataAfterLogout,
@@ -19,6 +21,32 @@ import {
 beforeEach(async () => {
   await _clearAllForTests();
 });
+
+async function createVersionTwoDatabaseWithLegacyEntry(): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const request = indexedDB.open("exhibition-scanner", 2);
+    request.addEventListener("upgradeneeded", () => {
+      request.result.createObjectStore("visitorCache", { keyPath: "qrToken" });
+      request.result.createObjectStore("visitOutbox", { keyPath: "localId" });
+    });
+    request.addEventListener("error", () => reject(request.error));
+    request.addEventListener("success", () => {
+      const db = request.result;
+      const tx = db.transaction("visitOutbox", "readwrite");
+      tx.objectStore("visitOutbox").put({
+        localId: "legacy",
+        qrToken: "tok-legacy",
+        scannedAt: "2026-01-01T00:00:00.000Z",
+        synced: false,
+      });
+      tx.addEventListener("complete", () => {
+        db.close();
+        resolve();
+      });
+      tx.addEventListener("error", () => reject(tx.error));
+    });
+  });
+}
 
 describe("visitorCache", () => {
   it("caches and retrieves a visitor by qrToken", async () => {
@@ -65,6 +93,34 @@ describe("visitOutbox", () => {
     const all = await getAllOutboxEntries();
     expect(all).toHaveLength(1);
     expect(all[0]?.synced).toBe(false);
+    expect(all[0]?.ownerExhibitorId).toBeNull();
+  });
+
+  it("migrates existing records without an owner as unowned", async () => {
+    await _deleteDatabaseForTests();
+    await createVersionTwoDatabaseWithLegacyEntry();
+
+    const [legacy] = await getAllOutboxEntries();
+
+    expect(legacy).toMatchObject({
+      localId: "legacy",
+      ownerExhibitorId: null,
+      synced: false,
+    });
+  });
+
+  it("atomically claims only unowned entries", async () => {
+    await addOutboxEntry({ localId: "a", qrToken: "tok-1", scannedAt: new Date().toISOString() });
+    await addOutboxEntry({ localId: "b", qrToken: "tok-2", scannedAt: new Date().toISOString() });
+    await claimUnownedOutboxEntries("exhibitor-a");
+    await addOutboxEntry({ localId: "c", qrToken: "tok-3", scannedAt: new Date().toISOString() });
+
+    await claimUnownedOutboxEntries("exhibitor-b");
+
+    const byId = new Map((await getAllOutboxEntries()).map((entry) => [entry.localId, entry]));
+    expect(byId.get("a")?.ownerExhibitorId).toBe("exhibitor-a");
+    expect(byId.get("b")?.ownerExhibitorId).toBe("exhibitor-a");
+    expect(byId.get("c")?.ownerExhibitorId).toBe("exhibitor-b");
   });
 
   it("marks entries synced and excludes them from unsynced/syncable lists", async () => {
@@ -142,7 +198,8 @@ describe("visitOutbox", () => {
       qrToken: "tok-synced",
       scannedAt: new Date().toISOString(),
     });
-    await markOutboxEntriesSynced(["synced-scan"]);
+    await claimUnownedOutboxEntries("exhibitor-a");
+    await markOutboxEntriesSynced(["synced-scan"], "exhibitor-a");
 
     await clearScannerDataAfterLogout();
 
@@ -150,6 +207,7 @@ describe("visitOutbox", () => {
     const remaining = await getAllOutboxEntries();
     expect(remaining.map((entry) => entry.localId)).toEqual(["private-scan"]);
     expect(remaining[0]?.synced).toBe(false);
+    expect(remaining[0]?.ownerExhibitorId).toBe("exhibitor-a");
   });
 
   it("keeps transient errors syncable (they were never marked permanent)", async () => {

@@ -13,6 +13,7 @@ const row: ScannedVisitorRow = {
   email: null,
   visitorType: "invited",
   qrToken: "private-token",
+  shortCode: null,
   scanCount: 1,
   lastScannedAt: new Date("2026-08-10T12:00:00.000Z"),
   createdAt: new Date("2026-08-10T12:00:00.000Z"),

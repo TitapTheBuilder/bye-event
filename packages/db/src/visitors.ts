@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, ilike, inArray, isNull, or, type SQL, sql } from "drizzle-orm";
 import { customAlphabet, nanoid } from "nanoid";
-import type { Database } from "./client";
+import type { Database, DatabaseTransaction } from "./client";
 import { type NewVisitor, type Visitor, visitors } from "./schema";
 
 export interface CreateVisitorInput {
@@ -20,10 +20,26 @@ function generateQrToken(): string {
   return nanoid(32);
 }
 
-function generateShortCode(): string {
-  // 6-digit random number for manual entry
-  const nanoid6 = customAlphabet("0123456789", 6);
-  return nanoid6();
+const generateShortCodeCandidate = customAlphabet("0123456789", 6);
+
+async function allocateUniqueShortCodes(
+  tx: DatabaseTransaction,
+  count: number,
+): Promise<string[]> {
+  const candidates = new Set<string>();
+
+  while (candidates.size < count) candidates.add(generateShortCodeCandidate());
+
+  while (true) {
+    const existing = await tx
+      .select({ shortCode: visitors.shortCode })
+      .from(visitors)
+      .where(inArray(visitors.shortCode, [...candidates]));
+
+    if (existing.length === 0) return [...candidates];
+    for (const row of existing) candidates.delete(row.shortCode);
+    while (candidates.size < count) candidates.add(generateShortCodeCandidate());
+  }
 }
 
 /**
@@ -44,17 +60,26 @@ export async function createVisitorsBulk(
   inputs: CreateVisitorInput[],
 ): Promise<Visitor[]> {
   if (inputs.length === 0) return [];
-  const values: NewVisitor[] = inputs.map((input) => ({
-    firstName: input.firstName?.trim() || null,
-    lastName: input.lastName?.trim() || null,
-    company: input.company?.trim() || null,
-    phoneNumber: input.phoneNumber?.trim() || null,
-    email: input.email?.trim() || null,
-    visitorType: input.visitorType ?? "invited",
-    qrToken: generateQrToken(),
-    shortCode: generateShortCode(),
-  }));
-  return db.insert(visitors).values(values).returning();
+  if (inputs.length > 100_000) throw new RangeError("Cannot allocate more than 100,000 short codes");
+
+  // Serializing only the short-code allocation prevents concurrent imports
+  // from choosing the same six-digit value while keeping the public manual
+  // entry flow free of attempt counters or lockouts.
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(70226002)`);
+    const shortCodes = await allocateUniqueShortCodes(tx, inputs.length);
+    const values: NewVisitor[] = inputs.map((input, index) => ({
+      firstName: input.firstName?.trim() || null,
+      lastName: input.lastName?.trim() || null,
+      company: input.company?.trim() || null,
+      phoneNumber: input.phoneNumber?.trim() || null,
+      email: input.email?.trim() || null,
+      visitorType: input.visitorType ?? "invited",
+      qrToken: generateQrToken(),
+      shortCode: shortCodes[index] as string,
+    }));
+    return tx.insert(visitors).values(values).returning();
+  });
 }
 
 /** Create `count` blank guest rows, each with its own freshly generated qr_token. */
@@ -78,6 +103,30 @@ export async function getVisitorByIdentifier(
         isNull(visitors.deactivatedAt)
       )
     )
+    .limit(1);
+  return row;
+}
+
+export async function getVisitorByQrToken(
+  db: Database,
+  qrToken: string,
+): Promise<Visitor | undefined> {
+  const [row] = await db
+    .select()
+    .from(visitors)
+    .where(and(eq(visitors.qrToken, qrToken), isNull(visitors.deactivatedAt)))
+    .limit(1);
+  return row;
+}
+
+export async function getVisitorByShortCode(
+  db: Database,
+  shortCode: string,
+): Promise<Visitor | undefined> {
+  const [row] = await db
+    .select()
+    .from(visitors)
+    .where(and(eq(visitors.shortCode, shortCode), isNull(visitors.deactivatedAt)))
     .limit(1);
   return row;
 }

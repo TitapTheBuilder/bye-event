@@ -12,6 +12,23 @@ import * as XLSX from "xlsx";
 
 type ExportRow = Record<string, string | number | null>;
 
+export const MAX_EXPORT_RECORDS = 50_000;
+const SPREADSHEET_FORMULA_PREFIX = /^[=+\-@\t\r]/;
+
+function neutralizeSpreadsheetCell(value: string | number | null): string | number | null {
+  return typeof value === "string" && SPREADSHEET_FORMULA_PREFIX.test(value)
+    ? `'${value}`
+    : value;
+}
+
+function neutralizeSpreadsheetRows(rows: ExportRow[]): ExportRow[] {
+  return rows.map((row) =>
+    Object.fromEntries(
+      Object.entries(row).map(([key, value]) => [key, neutralizeSpreadsheetCell(value)]),
+    ),
+  );
+}
+
 function isoOrNull(value: Date | null | undefined): string | null {
   return value ? value.toISOString() : null;
 }
@@ -80,6 +97,10 @@ export function serializeExport(
   format: ExportFormat,
   rows: ExportRow[],
 ): SerializedExport {
+  if (rows.length > MAX_EXPORT_RECORDS) {
+    throw new RangeError(`Export cannot contain more than ${MAX_EXPORT_RECORDS} records`);
+  }
+
   const baseName = `${entity}-export-${new Date().toISOString().slice(0, 10)}`;
 
   if (format === "json") {
@@ -90,15 +111,17 @@ export function serializeExport(
     };
   }
 
+  const spreadsheetRows = neutralizeSpreadsheetRows(rows);
+
   if (format === "csv") {
     return {
-      body: Papa.unparse(rows),
+      body: Papa.unparse(spreadsheetRows),
       contentType: "text/csv",
       filename: `${baseName}.csv`,
     };
   }
 
-  const worksheet = XLSX.utils.json_to_sheet(rows);
+  const worksheet = XLSX.utils.json_to_sheet(spreadsheetRows);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, entity);
   const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;

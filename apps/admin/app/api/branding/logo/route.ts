@@ -3,16 +3,15 @@ import { logoUploadSchema } from "@repo/shared/schemas";
 import { extractBrandColors } from "@/lib/colors";
 import { forbiddenOrigin, isSameOriginRequest, unauthorized } from "@/lib/http";
 import { requireAdminSession, UnauthorizedError } from "@/lib/session";
-import { saveLogoUpload } from "@/lib/uploads";
+import { InvalidLogoUploadError, saveLogoUpload } from "@/lib/uploads";
 import { NextResponse } from "next/server";
 
 /**
- * Logo upload (§7): validates file type/size, stores it to disk, and
- * auto-extracts 2-3 brand colors from it (node-vibrant) unless extraction
- * fails (e.g. an SVG logo) -- in which case the existing/default palette
- * is kept and the admin can still set colors manually via PATCH
- * /api/branding. Writes event_settings.logo_url, read by both apps at
- * render time.
+ * Logo upload (§7): validates and decodes a bounded raster image, stores a
+ * canonical PNG, and auto-extracts 2-3 brand colors from it (node-vibrant).
+ * If extraction fails, the existing/default palette is kept and the admin
+ * can still set colors manually via PATCH /api/branding. Writes
+ * event_settings.logo_url, read by both apps at render time.
  */
 export async function POST(request: Request) {
   if (!isSameOriginRequest(request)) return forbiddenOrigin();
@@ -36,12 +35,21 @@ export async function POST(request: Request) {
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const { filePath, url, storagePath } = await saveLogoUpload(buffer, parsed.data.contentType);
+  let saved: Awaited<ReturnType<typeof saveLogoUpload>>;
+  try {
+    saved = await saveLogoUpload(buffer, parsed.data.contentType);
+  } catch (error) {
+    if (error instanceof InvalidLogoUploadError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    throw error;
+  }
+  const { filePath, url, storagePath, data, contentType } = saved;
 
   // The copy that actually matters. The exhibitor app runs as a separate
   // container and cannot read this one's disk, but both talk to the same
   // database -- so that is what its /uploads route serves the logo from.
-  await putUpload(db, storagePath, parsed.data.contentType, buffer);
+  await putUpload(db, storagePath, contentType, data);
 
   const extracted = await extractBrandColors(filePath);
 

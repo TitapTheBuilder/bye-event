@@ -1,5 +1,6 @@
 import type { VisitSyncResponse } from "@repo/shared/schemas";
 import {
+  claimUnownedOutboxEntries,
   clearAllOutboxEntryErrors,
   getSyncableOutboxEntries,
   getUnsyncedOutboxEntries,
@@ -29,7 +30,10 @@ export class SyncEngine {
   private status: SyncStatus = "idle";
   private inFlightFlush: Promise<void> | null = null;
   private flushRequested = false;
-  private isAuthenticated = false;
+  private authenticatedExhibitorId: string | null = null;
+  private authRevision = 0;
+  private preparedAuthRevision = -1;
+  private activeRequest: { revision: number; controller: AbortController } | null = null;
   private backoffMs: number;
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly fetchImpl: typeof fetch;
@@ -62,22 +66,29 @@ export class SyncEngine {
   }
 
   /**
-   * Call this whenever the app learns whether the exhibitor is logged in
-   * (on load, on login, on logout). Transitioning to authenticated
-   * triggers an immediate flush of the ENTIRE outbox, including everything
-   * accumulated before the account existed on this device.
+   * Call this whenever the app learns the authenticated exhibitor identity.
+   * A new identity invalidates pending work for the previous account and
+   * triggers an immediate owner-scoped flush.
    */
-  setAuthenticated(value: boolean): void {
-    const wasAuthenticated = this.isAuthenticated;
-    this.isAuthenticated = value;
-    if (value && !wasAuthenticated) {
-      this.backoffMs = this.initialBackoffMs;
-      // A prior app version may have permanently parked a token that is now
-      // valid after normalization or an admin correction. Retry such entries
-      // once per authenticated session, then park true misses again.
-      void clearAllOutboxEntryErrors().finally(() => this.requestFlush());
-    } else if (!value) {
-      this.clearRetryTimer();
+  setAuthenticated(exhibitorId: string | null): void {
+    const normalizedId = exhibitorId?.trim() || null;
+    if (normalizedId === this.authenticatedExhibitorId) {
+      if (!normalizedId) void this.setStatus("signed-out");
+      return;
+    }
+
+    this.activeRequest?.controller.abort();
+    this.activeRequest = null;
+    this.clearRetryTimer();
+    this.flushRequested = false;
+    this.authenticatedExhibitorId = normalizedId;
+    this.authRevision += 1;
+    this.preparedAuthRevision = -1;
+    this.backoffMs = this.initialBackoffMs;
+
+    if (normalizedId) {
+      this.requestFlush();
+    } else {
       void this.setStatus("signed-out");
     }
   }
@@ -114,43 +125,72 @@ export class SyncEngine {
   }
 
   private async doFlush(): Promise<void> {
+    const exhibitorId = this.authenticatedExhibitorId;
+    const authRevision = this.authRevision;
+
     try {
+      if (!exhibitorId) {
+        await this.setStatus("signed-out");
+        return;
+      }
+
+      // New and pre-v3 records are deliberately written unowned. Claim them
+      // before every owner-scoped read so a login flush includes the complete
+      // unowned + current-owner queue without ever touching another owner.
+      await claimUnownedOutboxEntries(exhibitorId);
+      if (!this.isCurrentAuth(exhibitorId, authRevision)) return;
+
+      if (this.preparedAuthRevision !== authRevision) {
+        // Retry parked entries once per session, but only for this account.
+        await clearAllOutboxEntryErrors(exhibitorId);
+        if (!this.isCurrentAuth(exhibitorId, authRevision)) return;
+        this.preparedAuthRevision = authRevision;
+      }
+
       if (typeof navigator !== "undefined" && !navigator.onLine) {
         await this.setStatus("offline");
         return;
       }
 
-      if (!this.isAuthenticated) {
-        await this.setStatus("signed-out");
-        return;
-      }
-
-      const entries = await getSyncableOutboxEntries();
+      const entries = await getSyncableOutboxEntries(exhibitorId);
+      if (!this.isCurrentAuth(exhibitorId, authRevision)) return;
       if (entries.length === 0) {
         this.clearRetryTimer();
-        const remaining = await getUnsyncedOutboxEntries();
+        const remaining = await getUnsyncedOutboxEntries(exhibitorId);
+        if (!this.isCurrentAuth(exhibitorId, authRevision)) return;
         await this.setStatus(remaining.length > 0 ? "error" : "idle");
         return;
       }
 
       await this.setStatus("syncing");
-      const response = await this.fetchImpl("/api/visits/sync", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          entries: entries.map((entry) => ({
-            localId: entry.localId,
-            qrToken: entry.qrToken,
-            scannedAt: entry.scannedAt,
-          })),
-        }),
-      });
+      if (!this.isCurrentAuth(exhibitorId, authRevision)) return;
 
+      const controller = new AbortController();
+      const activeRequest = { revision: authRevision, controller };
+      this.activeRequest = activeRequest;
+      let response: Response;
+      try {
+        response = await this.fetchImpl("/api/visits/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            entries: entries.map((entry) => ({
+              localId: entry.localId,
+              qrToken: entry.qrToken,
+              scannedAt: entry.scannedAt,
+            })),
+          }),
+          signal: controller.signal,
+        });
+      } finally {
+        if (this.activeRequest === activeRequest) this.activeRequest = null;
+      }
+
+      if (!this.isCurrentAuth(exhibitorId, authRevision)) return;
       if (response.status === 401) {
         // Session expired/never existed -- not a transient failure, don't
         // back off, just wait for the next explicit login.
-        this.isAuthenticated = false;
-        await this.setStatus("signed-out");
+        this.setAuthenticated(null);
         return;
       }
 
@@ -159,8 +199,11 @@ export class SyncEngine {
       }
 
       const data = (await response.json()) as VisitSyncResponse;
+      if (!this.isCurrentAuth(exhibitorId, authRevision)) return;
+
       const syncedIds: string[] = [];
       for (const result of data.results) {
+        if (!this.isCurrentAuth(exhibitorId, authRevision)) return;
         if (result.status === "synced") {
           syncedIds.push(result.localId);
         } else {
@@ -169,19 +212,29 @@ export class SyncEngine {
           // responses from an older server during rolling deployments.
           const permanent =
             result.errorCode === "visitor_not_found" || result.error === "Visitor not found";
-          await markOutboxEntryError(result.localId, result.error ?? "Sync failed", permanent);
+          await markOutboxEntryError(
+            result.localId,
+            result.error ?? "Sync failed",
+            permanent,
+            exhibitorId,
+          );
+          if (!this.isCurrentAuth(exhibitorId, authRevision)) return;
           if (permanent) {
             const entry = entries.find((candidate) => candidate.localId === result.localId);
             if (entry) await removeCachedVisitor(entry.qrToken);
           }
         }
       }
-      if (syncedIds.length > 0) await markOutboxEntriesSynced(syncedIds);
+      if (syncedIds.length > 0) {
+        await markOutboxEntriesSynced(syncedIds, exhibitorId);
+      }
+      if (!this.isCurrentAuth(exhibitorId, authRevision)) return;
 
       this.backoffMs = this.initialBackoffMs;
-      const retryable = await getSyncableOutboxEntries();
+      const retryable = await getSyncableOutboxEntries(exhibitorId);
+      if (!this.isCurrentAuth(exhibitorId, authRevision)) return;
       if (retryable.length > 0) {
-        this.scheduleRetry();
+        this.scheduleRetry(authRevision);
         await this.setStatus("error");
       } else {
         this.clearRetryTimer();
@@ -190,20 +243,29 @@ export class SyncEngine {
         // "idle" once there is nothing the sync loop can actually do.
         await this.setStatus("idle");
       }
-    } catch (err) {
-      // Surface the reason. A flush that dies before the request is even
-      // sent is otherwise indistinguishable from a flaky network -- the UI
-      // can only ever show a generic "sync issue" for both.
-      console.warn("Visit sync flush failed", err);
+    } catch {
+      // Never log the request body: it contains badge identifiers and local
+      // event IDs. The UI and retry state carry the actionable outcome.
+      console.warn("Visit sync flush failed");
       await this.setStatus("error");
-      this.scheduleRetry();
+      if (exhibitorId && this.isCurrentAuth(exhibitorId, authRevision)) {
+        this.scheduleRetry(authRevision);
+      }
     }
   }
 
-  private scheduleRetry(): void {
+  private isCurrentAuth(exhibitorId: string, authRevision: number): boolean {
+    return (
+      this.authenticatedExhibitorId === exhibitorId && this.authRevision === authRevision
+    );
+  }
+
+  private scheduleRetry(authRevision: number): void {
     this.clearRetryTimer();
     this.retryTimer = setTimeout(() => {
-      this.requestFlush();
+      if (this.authRevision === authRevision && this.authenticatedExhibitorId) {
+        this.requestFlush();
+      }
     }, this.backoffMs);
     this.backoffMs = Math.min(this.backoffMs * 2, this.maxBackoffMs);
   }
@@ -221,7 +283,9 @@ export class SyncEngine {
   }
 
   private async notify(): Promise<void> {
-    const pendingCount = (await getUnsyncedOutboxEntries()).length;
+    const pendingCount = (
+      await getUnsyncedOutboxEntries(this.authenticatedExhibitorId)
+    ).length;
     for (const listener of this.listeners) listener({ status: this.status, pendingCount });
   }
 }

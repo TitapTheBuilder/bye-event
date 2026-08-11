@@ -1,44 +1,35 @@
-FROM docker.arvancloud.ir/node:22-alpine AS base
+ARG BASE_IMAGE=docker.arvancloud.ir/node:22-alpine
+FROM ${BASE_IMAGE} AS base
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH
+RUN corepack enable && corepack prepare pnpm@11.18.0 --activate
 
-# 1. Dependency Pruning Phase (using turborepo)
-FROM base AS builder
+FROM base AS pruner
 WORKDIR /app
-RUN npm install -g pnpm@11.18.0 turbo
 COPY . .
-RUN turbo prune @repo/admin --docker
+RUN pnpm dlx turbo@2.10.8 prune @repo/admin --docker
 
-# 2. Install Phase
 FROM base AS installer
 WORKDIR /app
-RUN npm install -g pnpm@11.18.0
-COPY --from=builder /app/out/json/ .
-RUN pnpm install --frozen-lockfile
-COPY --from=builder /app/out/full/ .
-ENV NODE_ENV=production
+COPY --from=pruner /app/out/json/ .
+COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+COPY --from=pruner /app/out/full/ .
+COPY --from=pruner /app/tsconfig.base.json ./tsconfig.base.json
+ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm turbo run build --filter=@repo/admin
 
-# 3. Production Runner Phase
-FROM base AS runner
+FROM ${BASE_IMAGE} AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-
-# Create unprivileged user
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-
-# Copy standalone build
+ENV HOSTNAME=0.0.0.0
+ENV PORT=3000
+RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 COPY --from=installer --chown=nextjs:nodejs /app/apps/admin/.next/standalone ./
 COPY --from=installer --chown=nextjs:nodejs /app/apps/admin/.next/static ./apps/admin/.next/static
 COPY --from=installer --chown=nextjs:nodejs /app/apps/admin/public ./apps/admin/public
-
-# Make uploads dir accessible
 RUN mkdir -p /app/uploads && chown -R nextjs:nodejs /app/uploads
-
-# Switch to non-root user
 USER nextjs
 EXPOSE 3000
-ENV PORT=3000
-
-# Execute server
 CMD ["node", "apps/admin/server.js"]

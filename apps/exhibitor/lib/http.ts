@@ -5,34 +5,24 @@ import { NextResponse } from "next/server";
  * itself -- Server Actions get Next's built-in Origin verification for
  * free, but hand-rolled Route Handlers (like ours here) do not.
  */
-function firstForwardedValue(value: string | null): string | null {
-  return value?.split(",")[0]?.trim() || null;
+function configuredOrigin(request: Request): string | null {
+  const value = process.env.EXHIBITOR_PUBLIC_ORIGIN;
+  if (!value) return process.env.NODE_ENV === "production" ? null : new URL(request.url).origin;
+
+  try {
+    return new URL(value).origin;
+  } catch {
+    return null;
+  }
 }
 
 export function isSameOriginRequest(request: Request): boolean {
   const origin = request.headers.get("origin");
-  // Some same-site requests omit Origin, but we only call this from
-  // state-mutating handlers, so a missing header is treated as untrusted.
   if (!origin) return false;
 
   try {
-    const originUrl = new URL(origin);
-    const requestUrl = new URL(request.url);
-    const allowedOrigins = new Set([requestUrl.origin]);
-
-    // Next may see an internal container URL behind an HTTPS reverse proxy.
-    // Compare against the externally-visible host/protocol supplied by that
-    // trusted proxy as well as the direct request URL. This keeps CSRF origin
-    // validation intact while allowing phone/LAN and production proxy setups.
-    const forwardedHost = firstForwardedValue(request.headers.get("x-forwarded-host"));
-    const host = forwardedHost ?? request.headers.get("host");
-    const forwardedProto = firstForwardedValue(request.headers.get("x-forwarded-proto"));
-    const protocol = forwardedProto ?? requestUrl.protocol.replace(":", "");
-    if (host && (protocol === "http" || protocol === "https")) {
-      allowedOrigins.add(`${protocol}://${host}`);
-    }
-
-    return allowedOrigins.has(originUrl.origin);
+    const expected = configuredOrigin(request);
+    return expected !== null && new URL(origin).origin === expected;
   } catch {
     return false;
   }
@@ -47,13 +37,12 @@ export function unauthorized(message = "Unauthorized"): NextResponse {
 }
 
 /**
- * Best-effort client identifier for rate limiting the public visitor
- * lookup endpoint. Trusts X-Forwarded-For only because this app is
- * deployed behind a reverse proxy (Nginx/Caddy) that sets it -- see
- * docker-compose.yml / deployment docs.
+ * Client identifier for abuse controls. Forwarded headers are accepted only
+ * when deployment explicitly declares a trusted proxy boundary; the
+ * production Caddy topology strips and rewrites them before forwarding.
  */
 export function getClientIp(request: Request): string {
+  if (process.env.TRUST_PROXY !== "1") return "direct";
   const forwardedFor = request.headers.get("x-forwarded-for");
-  if (forwardedFor) return forwardedFor.split(",")[0]?.trim() ?? "unknown";
-  return "unknown";
+  return forwardedFor?.split(",")[0]?.trim() || "unknown";
 }

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { isSameOriginRequest } from "./http";
 
 function request(url: string, headers: Record<string, string>): Request {
@@ -15,6 +15,8 @@ function request(url: string, headers: Record<string, string>): Request {
   } as Request;
 }
 
+afterEach(() => vi.unstubAllEnvs());
+
 describe("isSameOriginRequest", () => {
   it("accepts a direct same-origin mutation", () => {
     expect(
@@ -27,14 +29,15 @@ describe("isSameOriginRequest", () => {
     ).toBe(true);
   });
 
-  it("accepts the external HTTPS origin behind a trusted reverse proxy", () => {
+  it("accepts the configured public origin behind a trusted reverse proxy", () => {
+    vi.stubEnv("EXHIBITOR_PUBLIC_ORIGIN", "https://scanner.example.com");
     expect(
       isSameOriginRequest(
         request("http://exhibitor:3000/api/visits/sync", {
-          origin: "https://192.168.1.25",
+          origin: "https://scanner.example.com",
           host: "exhibitor:3000",
-          "x-forwarded-host": "192.168.1.25",
-          "x-forwarded-proto": "https",
+          "x-forwarded-host": "attacker.example",
+          "x-forwarded-proto": "http",
         }),
       ),
     ).toBe(true);

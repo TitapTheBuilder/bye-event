@@ -32,6 +32,7 @@ export const exhibitors = pgTable("exhibitors", {
   username: varchar("username", { length: 100 }).notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   phoneNumber: varchar("phone_number", { length: 30 }).notNull().unique(),
+  sessionVersion: integer("session_version").notNull().default(0),
   deactivatedAt: timestamp("deactivated_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -103,8 +104,19 @@ export const admins = pgTable("admins", {
   name: varchar("name", { length: 200 }).notNull(),
   email: varchar("email", { length: 200 }).notNull().unique(),
   passwordHash: text("password_hash").notNull(),
+  sessionVersion: integer("session_version").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const rateLimitBuckets = pgTable(
+  "rate_limit_buckets",
+  {
+    key: text("key").primaryKey(),
+    requestCount: integer("request_count").notNull().default(1),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  },
+  (t) => [index("rate_limit_buckets_expires_at_idx").on(t.expiresAt)],
+);
 
 // Singleton row (id is always 1). Both apps read this at render time to
 // derive brand CSS custom properties -- never hardcode a customer's colors
@@ -167,6 +179,7 @@ export type Visit = typeof visits.$inferSelect;
 export type VisitSyncEvent = typeof visitSyncEvents.$inferSelect;
 export type Admin = typeof admins.$inferSelect;
 export type NewAdmin = typeof admins.$inferInsert;
+export type RateLimitBucket = typeof rateLimitBuckets.$inferSelect;
 export type EventSettings = typeof eventSettings.$inferSelect;
 export type Upload = typeof uploads.$inferSelect;
 export type NewUpload = typeof uploads.$inferInsert;

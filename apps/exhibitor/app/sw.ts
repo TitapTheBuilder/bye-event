@@ -1,6 +1,5 @@
 /// <reference lib="esnext" />
 /// <reference lib="webworker" />
-import { defaultCache } from "@serwist/turbopack/worker";
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
 import { NetworkOnly, Serwist } from "serwist";
 
@@ -25,7 +24,9 @@ const serwist = new Serwist({
       matcher: ({ url }) => url.origin === self.location.origin && url.pathname.startsWith("/api/"),
       handler: new NetworkOnly(),
     },
-    ...defaultCache,
+    // Everything else is served from the build-time precache or the network.
+    // Avoid broad runtime strategies that can turn visitor identifiers,
+    // authenticated RSC payloads, redirects, or profile pages into cache keys.
   ],
 });
 

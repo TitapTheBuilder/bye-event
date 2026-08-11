@@ -1,18 +1,20 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { formatPersonName, getPersonInitials } from "@repo/shared/person-name";
 import { useRouter } from "next/navigation";
 import { SyncStatusChip } from "@/components/SyncStatusChip";
 import { useAuth } from "@/lib/client/auth-context";
 import { useTranslation } from "@/lib/client/language-context";
 import { useSyncStatus } from "@/lib/client/use-sync-status";
+import { clearDeviceData } from "@/lib/offline/idb";
 
 export default function ProfilePage() {
   const { exhibitor, isLoading, logout } = useAuth();
   const { pendingCount } = useSyncStatus();
   const { t } = useTranslation();
   const router = useRouter();
+  const [deviceDataCleared, setDeviceDataCleared] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !exhibitor) {
@@ -68,10 +70,30 @@ export default function ProfilePage() {
 
       <button
         type="button"
-        onClick={() => void logout().then(() => {
-          router.refresh();
-          router.push("/");
-        })}
+        disabled={pendingCount > 0}
+        onClick={() => {
+          void clearDeviceData().then(() => setDeviceDataCleared(true));
+        }}
+        className="rounded-xl border border-border-subtle py-3 font-medium text-text-secondary disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {t("profile.clearDeviceData")}
+      </button>
+      <p className="-mt-4 text-xs text-text-muted">
+        {deviceDataCleared
+          ? t("profile.deviceDataCleared")
+          : pendingCount > 0
+            ? t("profile.clearAfterSync")
+            : t("profile.clearDeviceDataHint")}
+      </p>
+
+      <button
+        type="button"
+        onClick={() =>
+          void logout().then(() => {
+            router.refresh();
+            router.push("/");
+          })
+        }
         className="rounded-xl border border-border-subtle py-3 font-medium text-danger"
       >
         {t("profile.logout")}
