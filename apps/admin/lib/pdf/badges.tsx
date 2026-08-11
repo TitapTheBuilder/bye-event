@@ -107,10 +107,34 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderStyle: "dashed",
     borderColor: "#999999",
-    padding: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    position: "relative", // <-- CRITICAL: Turns the badge into a fixed canvas, bypassing flexbox bugs
+  },
+  qr: {
+    position: "absolute",
+    left: 14,
+    top: 39, // Vertically centered: (162 total height - 84 qr height) / 2 = 39
+    width: 84,
+    height: 84,
+  },
+  textColumn: {
+    position: "absolute",
+    right: 14, // Locks the column perfectly 14 pixels from the right border
+    top: 54, // Starts nicely below the logos
+    width: 125, // Hard brick wall: The text can NEVER exceed this width now
+    flexDirection: "column",
+  },
+  companyText: {
+    fontSize: 9,
+    fontWeight: 400,
+    color: "#555555",
+    marginTop: 6,
+    textAlign: "right",
+  },
+  prominentText: {
+    fontSize: 12,
+    fontWeight: 700,
+    color: "#111111",
+    textAlign: "right",
   },
   guestBadge: {
     flexDirection: "column",
@@ -119,13 +143,9 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingTop: 34,
   },
-  textColumn: {
-    flexDirection: "column",
-    justifyContent: "center",
-    flexGrow: 1,
-    paddingTop: 32,
-    paddingLeft: 10,
-    alignItems: "flex-end",
+  rtlText: {
+    direction: "rtl",
+    textAlign: "right",
   },
   logoStrip: {
     position: "absolute",
@@ -144,24 +164,6 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     objectFit: "contain",
-  },
-  firstName: {
-    fontSize: 10,
-    fontWeight: 400,
-    color: "#444444",
-  },
-  prominentText: {
-    fontSize: 18,
-    fontWeight: 700,
-    color: "#111111",
-  },
-  rtlText: {
-    direction: "rtl",
-    textAlign: "right",
-  },
-  qr: {
-    width: 84,
-    height: 84,
   },
   qrLarge: {
     width: 92,
@@ -216,50 +218,43 @@ function InvitedBadgesDocument({
       {pages.map((pageVisitors, pageIndex) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: pages are a static, non-reorderable chunking of the input list
         <Page key={pageIndex} size="LETTER" style={styles.page}>
-          {pageVisitors.map((visitor) => (
-            <View key={visitor.id} style={styles.badge} wrap={false}>
-              <BadgeLogos logoSource={logoSource} />
+        {pageVisitors.map((visitor) => {
+            const fullName = [visitor.firstName, visitor.lastName].filter(Boolean).join(" ");
 
-              {/* QR Code is now rendered FIRST so it sits on the left */}
-              <Image src={qrDataUrls.get(visitor.qrToken)} style={styles.qr} />
+            return (
+              <View key={visitor.id} style={styles.badge} wrap={false}>
+                <BadgeLogos logoSource={logoSource} />
 
-              <View style={styles.textColumn}>
-                {visitor.firstName ? (
-                  <Text
-                    style={
-                      containsArabicScript(visitor.firstName)
-                        ? [styles.firstName, styles.rtlText]
-                        : styles.firstName
-                    }
-                  >
-                    {visitor.firstName}
-                  </Text>
-                ) : null}
-                {visitor.lastName ? (
-                  <Text
-                    style={
-                      containsArabicScript(visitor.lastName)
-                        ? [styles.prominentText, styles.rtlText]
-                        : styles.prominentText
-                    }
-                  >
-                    {visitor.lastName}
-                  </Text>
-                ) : null}
-                {visitor.company ? (
-                  <Text
-                    style={
-                      containsArabicScript(visitor.company)
-                        ? [styles.prominentText, styles.rtlText]
-                        : styles.prominentText
-                    }
-                  >
-                    {visitor.company}
-                  </Text>
-                ) : null}
+                <Image src={qrDataUrls.get(visitor.qrToken)} style={styles.qr} />
+
+                <View style={styles.textColumn}>
+                  {fullName ? (
+                    <Text
+                      style={
+                        containsArabicScript(fullName)
+                          ? [styles.prominentText, styles.rtlText]
+                          : [styles.prominentText]
+                      }
+                    >
+                      {fullName}
+                    </Text>
+                  ) : null}
+                  
+                  {visitor.company ? (
+                    <Text
+                      style={
+                        containsArabicScript(visitor.company)
+                          ? [styles.companyText, styles.rtlText]
+                          : [styles.companyText]
+                      }
+                    >
+                      {visitor.company}
+                    </Text>
+                  ) : null}
+                </View>
               </View>
-            </View>
-          ))}
+            );
+          })}
         </Page>
       ))}
     </Document>
