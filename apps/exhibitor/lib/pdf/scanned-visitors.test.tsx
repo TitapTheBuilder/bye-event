@@ -6,6 +6,7 @@ import { generateScannedVisitorsPdf } from "./scanned-visitors";
 
 const row: ScannedVisitorRow = {
   visitorId: "019c0000-0000-7000-8000-000000000001",
+  shortCode: "TEST-123",
   firstName: "علی",
   lastName: "رضایی",
   company: "شرکت فناوری تهران",
