@@ -8,7 +8,7 @@ const rateLimitMap = new Map<string, number[]>();
 const MAX_REQUESTS = 10000;
 const WINDOW_MS = 60 * 1000; // 1 minute
 
-const PUBLIC_PATHS = ["/login", "/uploads"];
+const PUBLIC_PATHS = ["/login", "/uploads", "/api/auth/login"];
 
 export async function proxy(request: NextRequest) {
   const ip = request.headers.get("x-forwarded-for") || "unknown";
