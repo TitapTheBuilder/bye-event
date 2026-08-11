@@ -190,13 +190,16 @@ export default function ScanPage() {
       >
         <input
           value={manualToken}
-          onChange={(e) => setManualToken(e.target.value)}
-          placeholder={t("scan.manualPlaceholder")}
+          onChange={(e) => setManualToken(e.target.value.replace(/[^0-9]/g, "").slice(0, 6))}
+          placeholder={"6-digit code"}
+          maxLength={6}
+          inputMode="numeric"
+          pattern="[0-9]*"
           className="flex-1 rounded-xl border border-border-subtle bg-surface-1 px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted"
         />
         <button
           type="submit"
-          disabled={isProcessing || manualToken.trim().length === 0}
+          disabled={isProcessing || manualToken.trim().length !== 6}
           className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
           style={{ background: "var(--brand-gradient)" }}
         >

@@ -33,6 +33,10 @@ export default function VisitorDescriptionPage() {
       if (cancelled) return;
       setState(result);
 
+      if (result.status === "not-found") {
+        await removeOutboxEntriesByQrToken(qrToken);
+      }
+
       if (!scannedAt) {
         const outboxEntry = await getOutboxEntryByQrToken(qrToken);
         if (!cancelled && outboxEntry) setScannedAt(outboxEntry.scannedAt);

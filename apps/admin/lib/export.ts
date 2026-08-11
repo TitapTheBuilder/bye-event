@@ -20,6 +20,7 @@ function visitorsToRows(visitors: Visitor[]): ExportRow[] {
   return visitors.map((v) => ({
     id: v.id,
     qrToken: v.qrToken,
+    shortCode: v.shortCode,
     firstName: v.firstName,
     lastName: v.lastName,
     company: v.company,
