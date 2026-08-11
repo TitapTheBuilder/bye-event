@@ -141,6 +141,7 @@ export default function GuestsPage() {
         <table className={`w-full min-w-[640px] text-sm text-${dir === "rtl" ? "end" : "start"}`}>
           <thead className="border-b border-border-subtle text-text-secondary">
             <tr>
+              <th className="px-4 py-3">Short Code</th>
               <th className="px-4 py-3">{t("visitors.firstName")}</th>
               <th className="px-4 py-3">{t("visitors.lastName")}</th>
               <th className="px-4 py-3">{t("visitors.company")}</th>
@@ -155,19 +156,20 @@ export default function GuestsPage() {
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-text-secondary">
+                <td colSpan={8} className="px-4 py-8 text-center text-text-secondary">
                   {t("common.loading")}
                 </td>
               </tr>
             ) : visitors.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-text-secondary">
+                <td colSpan={8} className="px-4 py-8 text-center text-text-secondary">
                   {t("guests.noGuests")}
                 </td>
               </tr>
             ) : (
               visitors.map((visitor) => (
                 <tr key={visitor.id} className="border-b border-border-subtle last:border-0">
+                  <td className="px-4 py-3 font-mono text-sm text-text-primary">{visitor.shortCode}</td>
                   <td className="px-4 py-3 text-text-primary">
                     {visitor.firstName ?? t("guests.unfilled")}
                   </td>

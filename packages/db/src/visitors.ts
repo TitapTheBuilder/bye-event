@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, ilike, inArray, isNull, or, type SQL, sql } from "drizzle-orm";
-import { nanoid } from "nanoid";
+import { customAlphabet, nanoid } from "nanoid";
 import type { Database } from "./client";
 import { type NewVisitor, type Visitor, visitors } from "./schema";
 
@@ -12,11 +12,18 @@ export interface CreateVisitorInput {
   visitorType?: "invited" | "guest";
 }
 
+
 function generateQrToken(): string {
   // 32 URL-safe characters (~190 bits of entropy): long, unguessable, and
   // deliberately unrelated to the row's uuidv7 `id` so the printed badge
   // never leaks creation order or becomes enumerable.
   return nanoid(32);
+}
+
+function generateShortCode(): string {
+  // 6-digit random number for manual entry
+  const nanoid6 = customAlphabet("0123456789", 6);
+  return nanoid6();
 }
 
 /**
@@ -45,6 +52,7 @@ export async function createVisitorsBulk(
     email: input.email?.trim() || null,
     visitorType: input.visitorType ?? "invited",
     qrToken: generateQrToken(),
+    shortCode: generateShortCode(),
   }));
   return db.insert(visitors).values(values).returning();
 }
@@ -57,14 +65,19 @@ export async function createGuestVisitors(db: Database, count: number): Promise<
   );
 }
 
-export async function getVisitorByQrToken(
+export async function getVisitorByIdentifier(
   db: Database,
-  qrToken: string,
+  identifier: string,
 ): Promise<Visitor | undefined> {
   const [row] = await db
     .select()
     .from(visitors)
-    .where(and(eq(visitors.qrToken, qrToken), isNull(visitors.deactivatedAt)))
+    .where(
+      and(
+        or(eq(visitors.qrToken, identifier), eq(visitors.shortCode, identifier)),
+        isNull(visitors.deactivatedAt)
+      )
+    )
     .limit(1);
   return row;
 }

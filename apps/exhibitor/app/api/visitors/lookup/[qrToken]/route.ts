@@ -1,4 +1,4 @@
-import { db, getVisitorByQrToken } from "@repo/db";
+import { db, getVisitorByIdentifier } from "@repo/db";
 import { checkRateLimit } from "@repo/shared/auth";
 import { VISITOR_LOOKUP_RATE_LIMIT } from "@repo/shared/constants";
 import { NextResponse } from "next/server";
@@ -29,7 +29,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ qrTo
     return NextResponse.json({ error: "Invalid QR token" }, { status: 400 });
   }
 
-  const visitor = await getVisitorByQrToken(db, qrToken);
+  const visitor = await getVisitorByIdentifier(db, qrToken);
   if (!visitor) {
     return NextResponse.json({ error: "Visitor not found" }, { status: 404 });
   }

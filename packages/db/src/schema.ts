@@ -45,6 +45,8 @@ export const visitors = pgTable(
     // order (which uuidv7 does) or be enumerable (which a serial int would
     // be). Never derive this from `id`.
     qrToken: varchar("qr_token", { length: 64 }).notNull().unique(),
+    // A 6-digit random number printed on badges for manual entry
+    shortCode: varchar("short_code", { length: 10 }).notNull().unique(),
     firstName: varchar("first_name", { length: 200 }),
     lastName: varchar("last_name", { length: 200 }),
     company: varchar("company", { length: 200 }),

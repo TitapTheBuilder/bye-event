@@ -177,6 +177,7 @@ export default function VisitorsPage() {
         <table className={`w-full min-w-[820px] text-sm text-${dir === "rtl" ? "end" : "start"}`}>
           <thead className="border-b border-border-subtle text-text-secondary">
             <tr>
+              <th className="px-4 py-3">Short Code</th>
               <th
                 className="cursor-pointer select-none px-4 py-3"
                 onClick={() => toggleSort("firstName")}
@@ -216,19 +217,20 @@ export default function VisitorsPage() {
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-text-secondary">
+                <td colSpan={9} className="px-4 py-8 text-center text-text-secondary">
                   {t("common.loading")}
                 </td>
               </tr>
             ) : visitors.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-text-secondary">
+                <td colSpan={9} className="px-4 py-8 text-center text-text-secondary">
                   {t("visitors.noVisitors")}
                 </td>
               </tr>
             ) : (
               visitors.map((visitor) => (
                 <tr key={visitor.id} className="border-b border-border-subtle last:border-0">
+                  <td className="px-4 py-3 font-mono text-sm text-text-primary">{visitor.shortCode}</td>
                   <td className="px-4 py-3 text-text-primary">{visitor.firstName ?? "—"}</td>
                   <td className="px-4 py-3 text-text-primary">{visitor.lastName ?? "—"}</td>
                   <td className="px-4 py-3 text-text-secondary">{visitor.company ?? "—"}</td>

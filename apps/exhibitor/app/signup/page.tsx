@@ -36,6 +36,7 @@ export default function SignupPage() {
       setError(result.error);
       return;
     }
+    router.refresh();
     router.push("/");
   }
 

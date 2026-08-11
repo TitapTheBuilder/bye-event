@@ -27,6 +27,7 @@ export default function LoginPage() {
       setError(result.error);
       return;
     }
+    router.refresh();
     router.push(searchParams.get("next") ?? "/");
   }
 

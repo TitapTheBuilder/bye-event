@@ -1,4 +1,4 @@
-import { db, getVisitorByQrToken, syncVisitEvent } from "@repo/db";
+import { db, getVisitorByIdentifier, recordVisitSync } from "@repo/db";
 import { visitSyncRequestSchema } from "@repo/shared/schemas";
 import type { VisitSyncResponse, VisitSyncResultEntry } from "@repo/shared/schemas";
 import { forbiddenOrigin, isSameOriginRequest, unauthorized } from "@/lib/http";
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
 
   for (const entry of parsed.data.entries) {
     try {
-      const visitor = await getVisitorByQrToken(db, entry.qrToken);
+      const visitor = await getVisitorByIdentifier(db, entry.qrToken);
       if (!visitor) {
         results.push({
           localId: entry.localId,

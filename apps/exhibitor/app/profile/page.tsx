@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect } from "react";
 import { formatPersonName, getPersonInitials } from "@repo/shared/person-name";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { SyncStatusChip } from "@/components/SyncStatusChip";
 import { useAuth } from "@/lib/client/auth-context";
 import { useTranslation } from "@/lib/client/language-context";
@@ -13,12 +15,23 @@ export default function ProfilePage() {
   const { t } = useTranslation();
   const router = useRouter();
 
+  useEffect(() => {
+    if (!isLoading && !exhibitor) {
+      router.replace("/login?next=/profile");
+    }
+  }, [isLoading, exhibitor, router]);
+
   if (isLoading) {
     return <p className="px-6 py-8 text-sm text-text-secondary">{t("common.loading")}</p>;
   }
 
+  useEffect(() => {
+    if (!isLoading && !exhibitor) {
+      router.replace("/login?next=/profile");
+    }
+  }, [exhibitor, isLoading, router]);
+
   if (!exhibitor) {
-    router.replace("/login?next=/profile");
     return null;
   }
 
@@ -60,7 +73,10 @@ export default function ProfilePage() {
 
       <button
         type="button"
-        onClick={() => void logout().then(() => router.push("/"))}
+        onClick={() => void logout().then(() => {
+          router.refresh();
+          router.push("/");
+        })}
         className="rounded-xl border border-border-subtle py-3 font-medium text-danger"
       >
         {t("profile.logout")}
