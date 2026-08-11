@@ -5,7 +5,7 @@ import { type NextRequest, NextResponse } from "next/server";
 // Basic in-memory rate limiting map for Node runtime (IP -> timestamps)
 // In production, use Upstash Redis for distributed rate limiting.
 const rateLimitMap = new Map<string, number[]>();
-const MAX_REQUESTS = 100;
+const MAX_REQUESTS = 10000;
 const WINDOW_MS = 60 * 1000; // 1 minute
 
 const AUTH_REQUIRED_PREFIXES = ["/scanned", "/profile"];
