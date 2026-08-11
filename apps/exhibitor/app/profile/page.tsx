@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { formatPersonName, getPersonInitials } from "@repo/shared/person-name";
 import { useRouter } from "next/navigation";
 import { SyncStatusChip } from "@/components/SyncStatusChip";
@@ -17,8 +18,13 @@ export default function ProfilePage() {
     return <p className="px-6 py-8 text-sm text-text-secondary">{t("common.loading")}</p>;
   }
 
+  useEffect(() => {
+    if (!isLoading && !exhibitor) {
+      router.replace("/login?next=/profile");
+    }
+  }, [exhibitor, isLoading, router]);
+
   if (!exhibitor) {
-    router.replace("/login?next=/profile");
     return null;
   }
 
@@ -60,7 +66,10 @@ export default function ProfilePage() {
 
       <button
         type="button"
-        onClick={() => void logout().then(() => router.push("/"))}
+        onClick={() => void logout().then(() => {
+          router.refresh();
+          router.push("/");
+        })}
         className="rounded-xl border border-border-subtle py-3 font-medium text-danger"
       >
         {t("profile.logout")}
