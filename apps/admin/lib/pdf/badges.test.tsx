@@ -31,8 +31,8 @@ const eventSettings: EventSettings = {
 
 describe("generateBadgePdf", () => {
   it("formats unique guest labels in Persian", () => {
-    expect(formatGuestBadgeLabel(0)).toBe("مهمان ۱");
-    expect(formatGuestBadgeLabel(11)).toBe("مهمان ۱۲");
+    expect(formatGuestBadgeLabel()).toBe("مهمان");
+    expect(formatGuestBadgeLabel()).toBe("مهمان");
   });
 
   it("renders a Persian invited badge with the bundled font", async () => {

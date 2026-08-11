@@ -109,12 +109,22 @@ const styles = StyleSheet.create({
     borderColor: "#999999",
     position: "relative", // <-- CRITICAL: Turns the badge into a fixed canvas, bypassing flexbox bugs
   },
-  qr: {
+qr: {
     position: "absolute",
     left: 14,
-    top: 39, // Vertically centered: (162 total height - 84 qr height) / 2 = 39
+    top: 39, 
     width: 84,
     height: 84,
+  },
+  shortCodeText: {
+    position: "absolute",
+    left: 14,
+    width: 84,
+    top: 15,
+    textAlign: "center",
+    fontSize: 11,
+    color: "#555555",
+    letterSpacing: 2,
   },
   textColumn: {
     position: "absolute",
@@ -135,6 +145,12 @@ const styles = StyleSheet.create({
     fontWeight: 700,
     color: "#111111",
     textAlign: "right",
+  },
+  guestText: {
+    fontSize: 22,
+    fontWeight: 700,
+    color: "#111111",
+    textAlign: "right",   
   },
   guestBadge: {
     flexDirection: "column",
@@ -202,8 +218,8 @@ function BadgeLogos({ logoSource }: Pick<BadgeDocumentProps, "logoSource">) {
   );
 }
 
-export function formatGuestBadgeLabel(index: number): string {
-  return `مهمان ${new Intl.NumberFormat("fa-IR", { useGrouping: false }).format(index + 1)}`;
+export function formatGuestBadgeLabel(): string {
+  return `مهمان`;
 }
 
 function InvitedBadgesDocument({
@@ -224,7 +240,9 @@ function InvitedBadgesDocument({
             return (
               <View key={visitor.id} style={styles.badge} wrap={false}>
                 <BadgeLogos logoSource={logoSource} />
-
+                {visitor.shortCode ? (
+                  <Text style={styles.shortCodeText}>{visitor.shortCode}</Text>
+                ) : null}
                 <Image src={qrDataUrls.get(visitor.qrToken)} style={styles.qr} />
 
                 <View style={styles.textColumn}>
@@ -276,12 +294,14 @@ function GuestBadgesDocument({
           {pageVisitors.map((visitor, visitorIndex) => (
             <View key={visitor.id} style={styles.badge} wrap={false}>
               <BadgeLogos logoSource={logoSource} />
-
+                {visitor.shortCode ? (
+                  <Text style={styles.shortCodeText}>{visitor.shortCode}</Text>
+                ) : null}
               <Image src={qrDataUrls.get(visitor.qrToken)} style={styles.qr} />
 
               <View style={styles.textColumn}>
-                <Text style={[styles.prominentText, styles.guestLabel, styles.rtlText]}>
-                  {formatGuestBadgeLabel(pageIndex * BADGES_PER_PAGE + visitorIndex)}
+                <Text style={[styles.guestText, styles.guestLabel, styles.rtlText]}>
+                  {formatGuestBadgeLabel()}
                 </Text>
               </View>
             </View>
