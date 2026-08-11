@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { SyncStatusChip } from "@/components/SyncStatusChip";
 import { VisitorTypeBadge } from "@/components/VisitorTypeBadge";
 import { useTranslation } from "@/lib/client/language-context";
-import { getOutboxEntryByQrToken } from "@/lib/offline/idb";
+import { getOutboxEntryByQrToken, removeOutboxEntriesByQrToken } from "@/lib/offline/idb";
 import type { CachedVisitor } from "@/lib/offline/types";
 import { refreshVisitor, resolveVisitor } from "@/lib/offline/visitor-lookup";
 
