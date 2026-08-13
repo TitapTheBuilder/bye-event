@@ -182,7 +182,7 @@ export default function GuestsPage() {
                   <td className="px-4 py-3">
                     <StatusPill active={!visitor.deactivatedAt} />
                   </td>
-                  <td className="px-4 py-3 text-text-muted">
+                  <td className="px-4 py-3 text-text-muted" suppressHydrationWarning>
                     {new Date(visitor.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-4 py-3">

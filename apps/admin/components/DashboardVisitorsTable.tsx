@@ -117,7 +117,7 @@ export function DashboardVisitorsTable() {
                                 <span className="text-text-primary">
                                   {formatPersonName(row.exhibitorFirstName, row.exhibitorLastName)}
                                 </span>
-                                <span>
+                                <span suppressHydrationWarning>
                                   {t("dashTable.scans", { count: row.scanCount.toString() })} ·{" "}
                                   {t("dashTable.lastScan", {
                                     date: new Date(row.lastScannedAt).toLocaleString(),

@@ -128,7 +128,7 @@ export default function VisitorDescriptionPage() {
           </div>
 
           <div className="mt-6 flex items-center justify-between border-t border-border-subtle pt-4">
-            <span className="text-xs text-text-muted">
+            <span className="text-xs text-text-muted" suppressHydrationWarning>
               {scannedAt
                 ? t("visitor.scannedAt", { date: new Date(scannedAt).toLocaleString() })
                 : null}

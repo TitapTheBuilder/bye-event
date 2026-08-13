@@ -199,7 +199,7 @@ export default function AdminsPage() {
                     ) : null}
                   </td>
                   <td className="px-4 py-3 text-text-secondary">{admin.email}</td>
-                  <td className="px-4 py-3 text-text-muted">
+                  <td className="px-4 py-3 text-text-muted" suppressHydrationWarning>
                     {new Date(admin.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-4 py-3">

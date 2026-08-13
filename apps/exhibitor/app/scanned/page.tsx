@@ -103,7 +103,7 @@ export default function ScannedListPage() {
                     </p>
                     {item.visitorType ? <VisitorTypeBadge visitorType={item.visitorType} /> : null}
                   </div>
-                  <p className="truncate text-sm text-text-secondary">
+                  <p className="truncate text-sm text-text-secondary" suppressHydrationWarning>
                     {item.company ?? ""}
                     {item.company ? " · " : ""}
                     {new Date(item.scannedAt).toLocaleString()}

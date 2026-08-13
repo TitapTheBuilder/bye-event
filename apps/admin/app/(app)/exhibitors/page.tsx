@@ -113,7 +113,7 @@ export default function ExhibitorsPage() {
                   <td className="px-4 py-3">
                     <StatusPill active={!exhibitor.deactivatedAt} />
                   </td>
-                  <td className="px-4 py-3 text-text-muted">
+                  <td className="px-4 py-3 text-text-muted" suppressHydrationWarning>
                     {new Date(exhibitor.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-4 py-3">
