@@ -109,7 +109,7 @@ pnpm install
 
 ### 2. Environment Configuration
 
-Create a `.env` file at the root or within `packages/db/.env` (and respective apps) with local development values:
+Create a `.env` file at the repository root with local development values:
 
 ```env
 # Database Configuration
@@ -128,6 +128,18 @@ EXHIBITOR_PUBLIC_ORIGIN=http://localhost:3000
 TRUST_PROXY=0
 ALLOW_INSECURE_DATABASE=1
 NODE_ENV=development
+```
+
+Next.js applications read `.env` from their respective app root directories. Copy the root `.env` to both applications:
+
+```bash
+# On Linux / macOS / Git Bash:
+cp .env apps/admin/.env
+cp .env apps/exhibitor/.env
+
+# On Windows PowerShell:
+Copy-Item .env apps\admin\.env
+Copy-Item .env apps\exhibitor\.env
 ```
 
 ### 3. Start PostgreSQL Database
