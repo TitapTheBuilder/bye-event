@@ -22,8 +22,29 @@ export function isSameOriginRequest(request: Request): boolean {
   if (!origin) return false;
 
   try {
+    const originUrl = new URL(origin);
     const expected = configuredOrigin(request);
-    return expected !== null && new URL(origin).origin === expected;
+    if (expected !== null && originUrl.origin === expected) {
+      return true;
+    }
+
+    if (process.env.NODE_ENV !== "production") {
+      const requestUrl = new URL(request.url);
+      if (originUrl.origin === requestUrl.origin) {
+        return true;
+      }
+      const isLoopback = (host: string) =>
+        host === "localhost" || host === "127.0.0.1" || host === "[::1]" || host === "::1";
+      if (
+        isLoopback(originUrl.hostname) &&
+        isLoopback(requestUrl.hostname) &&
+        originUrl.port === requestUrl.port
+      ) {
+        return true;
+      }
+    }
+
+    return false;
   } catch {
     return false;
   }
