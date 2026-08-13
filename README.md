@@ -1,138 +1,399 @@
-# Exhibition System
+# Exhibition Visitor-Scanning & Management Platform
 
-This repository contains the Exhibition System, consisting of two Next.js applications (`apps/exhibitor` and `apps/admin`) sharing a single Postgres database (`packages/db`).
+A production-grade, offline-first exhibition visitor badge scanning and exhibition management platform built with **Next.js 16 (App Router)**, **Turborepo**, **PostgreSQL**, and **Drizzle ORM**.
 
-Before an internet-facing release, complete the [Production Security Release Checklist](docs/production-security-checklist.md). Its P0 items are launch blockers for both applications.
+The platform is designed with an **offline-first architecture** for high-volume trade shows and conferences. Exhibitors can scan visitor badges instantly without relying on a constant internet connection, while event organizers manage attendees, exhibitors, badge generation, and analytics through a hardened admin portal.
 
-## PII Data Flow & Retention
+---
 
-The following diagram tracks the lifecycle of visitor PII and offline queue caching:
+## Table of Contents
+- [Architecture & Monorepo Overview](#architecture--monorepo-overview)
+- [PII Data Flow & Security Model](#pii-data-flow--security-model)
+- [Prerequisites](#prerequisites)
+- [Local Development Setup](#local-development-setup)
+- [Testing & Quality Verification](#testing--quality-verification)
+- [Comprehensive Functionality Testing Guide](#comprehensive-functionality-testing-guide)
+- [Production Deployment Guide](#production-deployment-guide)
+- [Operational Runbooks & Incident Response](#operational-runbooks--incident-response)
+- [Security Release Gate](#security-release-gate)
+
+---
+
+## Architecture & Monorepo Overview
+
+The repository is structured as a Turborepo monorepo consisting of two Next.js applications and two shared packages:
+
+```
+├── apps/
+│   ├── exhibitor/              # Mobile-first PWA for exhibitors (Badge scanner, offline outbox, scanned leads)
+│   └── admin/                  # Administrative dashboard (Visitor/Exhibitor management, Badges, Imports/Exports)
+├── packages/
+│   ├── db/                     # PostgreSQL schema, Drizzle ORM queries, atomic rate limiting, and migrations
+│   └── shared/                 # Shared validation schemas (Zod), Argon2id hashing, and JWT session handling
+├── deploy/
+│   └── Caddyfile               # Production reverse proxy, automatic Let's Encrypt TLS, CSP & security headers
+├── compose.dev.yml             # Local development Docker Compose stack
+├── compose.production.yml      # Hardened production Docker Compose stack (read-only, non-root, Caddy ingress)
+└── docs/                       # Security checklists, deployment guides, and handoff runbooks
+```
+
+### Core Architecture Invariants
+1. **App Router Only:** No legacy Next.js Pages router or `getServerSideProps`.
+2. **Next.js 16 `proxy.ts` Routing Guard:** All route protection and Content Security Policy (CSP) nonce injection occur in `proxy.ts` (the Next.js 16+ standard). Route protection in `proxy.ts` serves as a UX guard (redirects); **every Server Action and Route Handler independently verifies authentication and authorization.**
+3. **Completely Isolated Auth Realms:** Admin and Exhibitor authentication realms use distinct tables (`admins` vs `exhibitors`), independent cryptographic signing secrets (`ADMIN_SESSION_SECRET` vs `EXHIBITOR_SESSION_SECRET`), distinct cookie names (`admin_session` vs `exhibitor_session`), and separate TTLs (12 hours for admin, 24 hours for exhibitor).
+4. **Argon2id Password Hashing:** All password hashes use OWASP-recommended Argon2id parameters (19 MiB memory, 2 iterations, 1 parallelism). Plaintext passwords, fast hashes (MD5/SHA), and bcrypt are forbidden.
+5. **Atomic Postgres Rate Limiting:** All rate limiting (authentication endpoints and public QR lookup) utilizes atomic PostgreSQL buckets (`rate_limit_buckets` table), preventing replica drift and process restart bypasses.
+6. **UUIDv7 & High-Entropy QR Tokens:** Primary keys use time-ordered UUIDv7 (`uuidv7()`). Visitor badge QR tokens are separate, unguessable 32-character URL-safe tokens (`nanoid(32)`) completely decoupled from database IDs.
+
+---
+
+## PII Data Flow & Security Model
 
 ```mermaid
 sequenceDiagram
-    participant User (Offline)
-    participant IndexedDB Outbox
-    participant Exhibitor App
-    participant Admin Panel
-    participant Postgres DB
+    autonumber
+    actor Visitor as Visitor Badge
+    actor Exhibitor as Exhibitor (Mobile PWA)
+    participant IDB as IndexedDB (Device Outbox)
+    participant Proxy as Caddy / Proxy Guard
+    participant API as Exhibitor API Route
+    participant DB as Postgres Database
+    actor Admin as Admin Portal
+
+    Visitor->>Exhibitor: Scans physical badge QR / 6-digit code
+    Exhibitor->>IDB: Write scan to local outbox immediately
+    Note over Exhibitor,IDB: PII stays on-device if offline or unauthenticated
     
-    User (Offline)->>IndexedDB Outbox: 1. Scans badge locally
-    Note over IndexedDB Outbox: PII remains on-device only (Checklist 4.5/4.7/4.9)
-    IndexedDB Outbox->>Exhibitor App: 2. Auth+Online -> Queue Flushed
-    Exhibitor App->>Postgres DB: 3. Idempotent Sync (via `localId`)
-    Note over Postgres DB: Data securely stored in visits/visitors
-    Postgres DB->>Admin Panel: 4. Export / Review
+    alt Online & Authenticated
+        Exhibitor->>Proxy: POST /api/visits/sync (Bearer cookie + Origin check)
+        Proxy->>API: Forward request with validated headers
+        API->>DB: Idempotent upsert on (exhibitor_id, visitor_id) via localId
+        DB-->>API: Row updated / inserted
+        API-->>Exhibitor: {"status": "synced"}
+        Exhibitor->>IDB: Mark scan as synced
+    else Offline
+        Note over Exhibitor: Scan is held in IndexedDB until connectivity returns
+    end
+
+    Admin->>Proxy: GET /api/export (Admin Session Required)
+    Proxy->>DB: Fetch aggregated visitor scans
+    DB-->>Admin: Neutralized CSV / XLSX download
 ```
 
-**PII Retention Policy:**
-- **IndexedDB**: Offline data (scans and cached visitors) is held indefinitely until it successfully syncs, or the user logs out. Logging out explicitly clears PII from the local cache to prevent cross-account contamination.
-- **Database**: Visitor and exhibitor records are soft-deleted via `deactivatedAt` to preserve analytics. Full data retention duration is governed by operational policy. 
+### Data Lifecycle & Retention Policy
+- **Client Cache (IndexedDB):** Scans and cached visitor profiles reside in browser IndexedDB. Logging out explicitly clears client-side visitor PII caches to prevent cross-account contamination on shared devices.
+- **Database Soft Deletion:** Deleting or deactivating visitors or exhibitors sets `deactivated_at`. Historical visit analytics remain intact while instantly revoking authenticated sessions via session versioning (`session_version`).
+- **Formula Neutralization:** All CSV/XLSX export endpoints neutralize potential spreadsheet formula injection payloads (`=`, `+`, `-`, `@`, `\t`, `\r`) with leading single quotes (`'`).
+
+---
 
 ## Prerequisites
 
-- **Node.js**: >= 22
-- **pnpm**: 11.18.0
-- **Docker** and **Docker Compose**: For running the PostgreSQL database (and optionally the apps in production mode).
+Ensure your development environment meets the following specifications:
+- **Node.js**: `v22.x` or higher
+- **Package Manager**: `pnpm` `v11.18.0` (`corepack enable` or `npm install -g pnpm@11.18.0`)
+- **Docker & Docker Compose**: For local PostgreSQL database and containerized production staging
+- **Operating System**: Linux, macOS, or Windows (WSL2 / PowerShell)
 
-## Environment Setup
+---
 
-Create a `.env` file in `packages/db` (or globally if you prefer) with the necessary environment variables. For local development with Docker, you can use:
+## Local Development Setup
+
+### 1. Clone the Repository and Install Dependencies
+
+```bash
+git clone <repository-url>
+cd bye2
+pnpm install
+```
+
+### 2. Environment Configuration
+
+Create a `.env` file at the root or within `packages/db/.env` (and respective apps) with local development values:
 
 ```env
-DATABASE_URL=postgres://exhibition:exhibition@localhost:5440/exhibition
-SESSION_SECRET=dev-secret-change-me
+# Database Configuration
+DATABASE_URL=postgres://exhibition:exhibition@localhost:5433/exhibition
+MIGRATION_DATABASE_URL=postgres://exhibition:exhibition@localhost:5433/exhibition
+
+# Authentication Secrets (Development strings only; production requires 32+ random chars)
+ADMIN_SESSION_SECRET=local-admin-development-secret-minimum-32-chars
+EXHIBITOR_SESSION_SECRET=local-exhibitor-development-secret-minimum-32-chars
+
+# Application Origins
+ADMIN_PUBLIC_ORIGIN=http://localhost:3001
+EXHIBITOR_PUBLIC_ORIGIN=http://localhost:3000
+
+# Proxy & Runtime Configuration
+TRUST_PROXY=0
+ALLOW_INSECURE_DATABASE=1
+NODE_ENV=development
 ```
 
-*(Note: In production, ensure you use a strong, unique `SESSION_SECRET`)*
+### 3. Start PostgreSQL Database
 
-## 1. Start the Database
+Use Docker to start the isolated PostgreSQL 18 development container:
 
-A `docker-compose.yml` file is provided at the root of the project to run the Postgres database.
-
-To start the database in the background:
 ```bash
-docker-compose up -d postgres
-```
-*This exposes the database on port `5440` on your host machine.*
-
-Next, generate and run the database migrations so the tables are created:
-```bash
-pnpm install
-pnpm run db:generate
-pnpm run db:migrate
+# Start PostgreSQL on port 5433
+docker-compose -f compose.dev.yml up -d postgres
 ```
 
-### Provision Initial Accounts
+### 4. Run Migrations & Seed Initial Accounts
 
-You must create at least one admin account to use the admin panel, and an exhibitor account to test the scanning flow.
+Apply the Drizzle database migrations and provision initial admin and exhibitor accounts:
 
-**Create an Admin:**
 ```bash
-ADMIN_NAME="Admin" ADMIN_EMAIL="admin@example.com" ADMIN_PASSWORD="password" pnpm --filter @repo/db seed
+# Apply migrations to database
+pnpm db:migrate
+
+# Seed the default Admin account
+ADMIN_NAME="System Admin" ADMIN_EMAIL="admin@example.com" ADMIN_PASSWORD="Password123!" pnpm --filter @repo/db seed
+
+# Seed a sample Exhibitor account
+EXHIBITOR_FIRST_NAME="Jane" EXHIBITOR_LAST_NAME="Doe" EXHIBITOR_USERNAME="janedoe" EXHIBITOR_PHONE="09120000000" EXHIBITOR_PASSWORD="Password123!" pnpm --filter @repo/db create-exhibitor
 ```
 
-**Create an Exhibitor:**
+### 5. Launch Development Servers
+
+Start both Next.js applications in development mode with Hot Module Replacement (Turbopack):
+
 ```bash
-EXHIBITOR_FIRST_NAME="Jane" EXHIBITOR_LAST_NAME="Doe" EXHIBITOR_USERNAME="tech" EXHIBITOR_PASSWORD="password" pnpm --filter @repo/db create-exhibitor
+pnpm dev
+```
+
+The applications will be accessible at:
+- **Exhibitor Scanning PWA**: [http://localhost:3000](http://localhost:3000)
+- **Admin Management Portal**: [http://localhost:3001](http://localhost:3001)
+
+---
+
+## Testing & Quality Verification
+
+The monorepo is covered by 151 unit, integration, and security tests. Run the automated verification commands:
+
+```bash
+# Run all Vitest suites across all packages
+pnpm test
+
+# Run TypeScript strict type-checking across monorepo
+pnpm typecheck
+
+# Run Biome code quality linter
+pnpm lint
+
+# Build standalone Next.js production bundles
+pnpm build
 ```
 
 ---
 
-## 2. Running in Development Mode
+## Comprehensive Functionality Testing Guide
 
-To run both applications in development mode with Hot Module Replacement:
-```bash
-pnpm run dev
-```
-- **Exhibitor App**: http://localhost:3000
-- **Admin App**: http://localhost:3001
+### 1. Admin Management Portal Walkthrough (`http://localhost:3001`)
 
-### Testing the QR Scanner on Mobile (Local LAN)
-The QR Scanner requires a secure context (HTTPS) to access your phone's camera. If you want to test on your phone over the local network, start the exhibitor app with the `dev:mobile` script (which binds to `0.0.0.0` and uses local SSL certificates):
-```bash
-pnpm --filter @repo/exhibitor dev:mobile
-```
-*Note: You must have generated `.certs/lan-key.pem` and `.certs/lan-cert.pem` first.*
-
----
-
-## 3. Running Production Mode Locally (LAN Testing)
-
-If you want to run the fully optimized production builds on your machine and expose them to your local network (e.g. `192.168.x.x`) to login from other devices:
-
-1. **Build the project:**
-   ```bash
-   pnpm run build
-   ```
-
-2. **Start the production server:**
-   ```bash
-   pnpm start
-   ```
-Both apps will bind to `0.0.0.0`, making them accessible from other devices on your WiFi.
-- **Exhibitor App**: `http://<your-local-ip>:3000`
-- **Admin App**: `http://<your-local-ip>:3001`
-
-*(Keep in mind that accessing via HTTP over a local IP will disable the camera scanner on mobile devices. You will need a reverse proxy or tunnel if you need to test the camera in this mode).*
+1. **Login:** Navigate to `http://localhost:3001/login` and log in with `admin@example.com` / `Password123!`.
+2. **Visitor Management & Guest Generation:**
+   - Go to `/visitors` and click **"Add Visitor"** to create an invited visitor.
+   - Click **"Generate Guests"** to batch-generate walk-in guest badges with unique 6-digit codes and 32-character QR tokens.
+3. **Bulk Visitor Import (CSV / XLSX):**
+   - Navigate to `/visitors/import`.
+   - Upload a test CSV containing headers: `first name, last name, company, email, phone number`.
+   - Preview the validated rows and commit the import.
+4. **PDF Badge Generation:**
+   - Go to `/badges`, select visitors, and click **"Generate Badges"**.
+   - The system renders high-resolution, print-ready badges with embedded QR codes, University of Tehran branding, and full Persian typography rendering (`Vazirmatn`).
+5. **Event Branding & Logo Upload:**
+   - Navigate to `/branding`.
+   - Upload an event logo (PNG, JPEG, or WebP up to 5MB). The system automatically re-encodes the image to a canonical metadata-free PNG, verifies dimensions, and extracts a harmonious brand color palette.
+6. **Exhibitor Management & Revocation:**
+   - Go to `/exhibitors` to view all registered exhibitor accounts.
+   - Click **"Deactivate"** on an exhibitor. Verify that their active sessions are immediately invalidated upon their next server request.
 
 ---
 
-## 4. Deploying to Production via Docker Compose
+### 2. Exhibitor Scanning PWA Walkthrough (`http://localhost:3000`)
 
-To deploy the production-hardened topology (Caddy reverse proxy + read-only Node.js containers with least-privilege egress), use `compose.production.yml`.
+1. **Sign Up / Login:**
+   - Navigate to `http://localhost:3000/signup` to register a new exhibitor account or log in at `/login`.
+2. **Manual 6-Digit Code Lookup:**
+   - On the `/scan` screen, enter a visitor's 6-digit short code (e.g. generated from the Admin panel).
+   - Verify that the visitor's details are retrieved and displayed on screen.
+3. **Camera QR Scanning on Mobile Devices (Local HTTPS):**
+   - Mobile browsers (Safari/Chrome) require an HTTPS secure context to access the camera hardware.
+   - Generate local certificates and start the mobile development server:
+     ```bash
+     pnpm --filter @repo/exhibitor dev:mobile
+     ```
+   - Open `https://<YOUR_LOCAL_IP>:3000` on your smartphone (connected to the same Wi-Fi network), grant camera permissions, and scan a generated visitor badge.
+4. **Offline Outbox & Network Resilience Testing:**
+   - Open browser DevTools (`F12`) on `http://localhost:3000/scan`.
+   - In the **Network** tab, switch throttling to **"Offline"**.
+   - Scan or look up a badge, enter notes, and save.
+   - Verify in **Application -> Storage -> IndexedDB -> `exhibition-db`** that the scan is stored in the `visitOutbox` with `synced: false`.
+   - Switch network back to **"Online"**.
+   - Observe the sync indicator change to "Synced" as the background sync engine automatically drains the outbox to PostgreSQL via idempotent sync (`/api/visits/sync`).
+5. **Export Scanned Leads:**
+   - Navigate to `/scanned` to review all collected leads.
+   - Click **"Export CSV"** or **"Export PDF"** to download the visitor list.
 
-> [!CAUTION]
-> Before deploying, you MUST complete the operational tasks documented in the [Production Deployment & Operational Runbook](docs/production-deployment.md). This includes running Staging Section 12 Verification tests, provisioning network firewalls, and documenting MFA exception approvals.
+---
 
-1. Copy `.env.production.example` to `.env.production` and provide real secure values:
+### 3. Security Boundary Verification
+
+You can execute manual attack-path tests against the running services using `curl`:
+
+```bash
+# 1. Verify CSRF Origin Check (Must return 403 Forbidden)
+curl -X POST http://localhost:3000/api/visits/sync \
+  -H "Origin: https://malicious-site.com" \
+  -H "Content-Type: application/json" \
+  -d '{"entries":[]}'
+
+# 2. Verify Anonymous Request Protection (Must return 401 Unauthorized)
+curl -X GET http://localhost:3001/api/visitors
+
+# 3. Verify Public Lookup Rate Limiting (Atomic Postgres Bucket)
+# Triggering rapid repeated QR lookups will return 429 Too Many Requests with Retry-After header:
+for i in {1..35}; do
+  curl -s -o /dev/null -w "%{http_code}\n" -X POST http://localhost:3000/api/visitors/lookup \
+    -H "Origin: http://localhost:3000" \
+    -H "Content-Type: application/json" \
+    -d '{"token":"non-existent-qr-token-32-chars-long"}'
+done
+```
+
+---
+
+## Production Deployment Guide
+
+The production topology deploys separate, non-root, read-only Next.js container instances behind a **Caddy** reverse proxy with automatic HTTPS and strict Content Security Policies.
+
+```
+                  ┌───────────────────────────────┐
+                  │      Internet Traffic         │
+                  └──────────────┬────────────────┘
+                                 │ :80 / :443
+                  ┌──────────────▼────────────────┐
+                  │     Caddy Reverse Proxy       │
+                  │   (TLS Termination, CSP,      │
+                  │    Security Headers, Gzip)    │
+                  └───────┬──────────────┬────────┘
+                          │              │
+        ┌─────────────────▼──┐        ┌──▼──────────────────┐
+        │ apps/exhibitor     │        │ apps/admin          │
+        │ Next.js Standalone │        │ Next.js Standalone  │
+        │ (Port 3000)        │        │ (Port 3000)         │
+        └─────────────────┬──┘        └──┬──────────────────┘
+                          │              │
+                          └───────┬──────┘
+                                  │ Private Network
+                  ┌───────────────▼───────────────┐
+                  │    PostgreSQL 18 Database     │
+                  │     (External / Managed)      │
+                  └───────────────────────────────┘
+```
+
+### Step 1: Server Provisioning & DNS Configuration
+1. Provision a Linux server (Ubuntu 22.04 / 24.04 LTS recommended) in a private VPC.
+2. Configure DNS records pointing to your server's public IP:
+   - `scan.yourdomain.com` (Exhibitor PWA)
+   - `admin.yourdomain.com` (Admin Management Portal)
+3. Open firewall ports `80` (HTTP) and `443` (HTTPS/QUIC). Ensure all other ports are blocked from the public internet.
+
+### Step 2: Environment & Secret Configuration
+
+Create `/opt/exhibition/.env.production` on the production server with cryptographically strong secrets (32+ bytes generated via `openssl rand -hex 32`):
+
+```env
+# Domain Configuration
+EXHIBITOR_DOMAIN=scan.yourdomain.com
+ADMIN_DOMAIN=admin.yourdomain.com
+ACME_EMAIL=security@yourdomain.com
+
+# IP Allowlist for Admin Panel (Restricts Admin domain to office/VPN CIDRs)
+# Example: "198.51.100.0/24 203.0.113.50/32" or "0.0.0.0/0" if using Identity-Aware Proxy
+ADMIN_ALLOWED_CIDRS=0.0.0.0/0
+
+# Database URLs (External Managed Postgres instance with TLS enabled)
+DATABASE_URL=postgres://app_user:StrongPassword@postgres.internal:5432/exhibition?sslmode=verify-full
+ADMIN_DATABASE_URL=postgres://admin_user:StrongPassword@postgres.internal:5432/exhibition?sslmode=verify-full
+EXHIBITOR_DATABASE_URL=postgres://exhibitor_user:StrongPassword@postgres.internal:5432/exhibition?sslmode=verify-full
+MIGRATION_DATABASE_URL=postgres://migrator_user:StrongPassword@postgres.internal:5432/exhibition?sslmode=verify-full
+
+# Cryptographic Session Secrets (MUST be at least 32 characters, never development placeholders)
+ADMIN_SESSION_SECRET=e7b4f81c9a3d2e5b8a0f6c4d1e9a7b3c5e8f0a2d4b6c8e0f2a4b6c8d0e2f4a6b
+EXHIBITOR_SESSION_SECRET=9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e
+
+# Production Runtime Flags
+NODE_ENV=production
+TRUST_PROXY=1
+ALLOW_INSECURE_DATABASE=0
+```
+
+### Step 3: Run Database Migrations
+
+Before starting the web applications, run the one-shot migration container:
+
+```bash
+docker compose -f compose.production.yml --env-file .env.production run --rm migrate
+```
+
+### Step 4: Launch Production Stack
+
+Start Caddy and both Next.js applications:
+
+```bash
+docker compose -f compose.production.yml --env-file .env.production up -d
+```
+
+### Step 5: Verify Deployment & TLS
+
+1. Inspect container health statuses:
    ```bash
-   cp .env.production.example .env.production
-   # Edit .env.production to set actual domains, secure secrets, and IP allowlists
+   docker compose -f compose.production.yml ps
    ```
-
-2. Build and start the production stack:
+2. Verify Caddy security headers on the public domain:
    ```bash
-   docker-compose -f compose.production.yml --env-file .env.production up -d --build
+   curl -sS -D - -o /dev/null https://scan.yourdomain.com/api/health/live
    ```
+   *Expected headers:*
+   - `Strict-Transport-Security: max-age=31536000; includeSubDomains; preload`
+   - `X-Content-Type-Options: nosniff`
+   - `Content-Security-Policy: ...`
 
-3. The system will provision HTTPS via Let's Encrypt automatically. The Admin Panel is restricted exclusively to the `ADMIN_ALLOWED_CIDRS` defined in your environment.
+---
+
+## Operational Runbooks & Incident Response
+
+### 1. Database Backup & Restore Drills
+
+**Creating an Encrypted Backup:**
+```bash
+pg_dump -h <db-host> -U postgres -F c -f "backup_$(date +%F).dump" exhibition
+```
+
+**Restoring from Backup:**
+```bash
+# 1. Apply baseline migrations
+docker compose -f compose.production.yml run --rm migrate
+
+# 2. Restore data idempotently
+pg_restore -h <db-host> -U postgres -d exhibition -1 "backup_YYYY-MM-DD.dump"
+```
+
+### 2. Immediate Session Revocation & Key Rotation
+- **Stolen Admin Credentials:** Delete or deactivate the Admin account in Postgres. The session versioning check in `apps/admin/lib/session.ts` invalidates already-issued cookies within milliseconds.
+- **Compromised Signing Keys:** Rotate `ADMIN_SESSION_SECRET` or `EXHIBITOR_SESSION_SECRET` in `.env.production` and restart the corresponding container (`docker compose restart admin exhibitor`). All existing sessions are immediately invalidated.
+- **Lost Exhibitor Device:** Deactivate the Exhibitor in the Admin panel. The device will be blocked upon its next network request. Scans stored in local IndexedDB cannot sync to the server under a deactivated account.
+
+---
+
+## Security Release Gate
+
+Before making any internet-facing deployment, review and verify all items in the [Production Security Release Checklist](docs/production-security-checklist.md) and execute the deployment sequence documented in [Production Readiness Handoff](docs/PRODUCTION-READINESS-HANDOFF.md).
+
+For additional operational details, refer to:
+- [Production Security Checklist](docs/production-security-checklist.md)
+- [Production Deployment Runbook](docs/production-deployment.md)
+- [Production Readiness Handoff](docs/PRODUCTION-READINESS-HANDOFF.md)

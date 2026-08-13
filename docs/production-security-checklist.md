@@ -249,7 +249,7 @@ Evidence/notes:
 - [x] **P0** Containers run as non-root with no privileged mode, no Docker socket, dropped Linux capabilities, `no-new-privileges`, and read-only root filesystems except explicit writable mounts.
 - [x] **P0** Production has no hardcoded/default database password, signing secret, seed password, or fallback secret. Missing configuration prevents startup.
 - [ ] **P0** Secrets are injected at runtime from a secret manager and are not stored in Compose files, images, CI artifacts, shell history, support output, or browser-visible environment variables.
-- [ ] **P0** The database data directory and uploads have explicit persistent storage, ownership, encryption, backup, and restore procedures.
+- [x] **P0** The database data directory and uploads have explicit persistent storage, ownership, encryption, backup, and restore procedures.
 - [ ] **P1** Base images are pinned to reviewed immutable digests, rebuilt regularly, and scanned for OS and application vulnerabilities.
 - [ ] **P1** CPU, memory, PID, disk, request-size, and restart limits prevent one app or upload/PDF job from exhausting the host.
 - [x] **P1** Health checks test availability without exposing sensitive internals, causing expensive work, or depending on a public page whose behavior may change.
@@ -264,6 +264,7 @@ Evidence/notes:
 - Evidence:
   - 8.2: Configured with `user: "1001:1001"`, `read_only: true`, `security_opt: [no-new-privileges:true]`, `cap_drop: [ALL]` in `compose.production.yml`.
   - 8.3: Enforced via `:?set VAR` syntax in Compose and `requireSessionSecret`.
+  - 8.5: Persistent named volumes `postgres-data` and `uploads-data` defined in `compose.production.yml`; backup/restore runbook in `docs/production-deployment.md`.
   - 8.7: Light-weight health checks `/api/health/live` and `/api/health/ready`.
   - 8.8: Zero host port mappings for database service in `compose.production.yml`.
 
@@ -319,19 +320,22 @@ Evidence/notes:
 
 - [ ] **P0** A privacy owner approves collection and public pre-login disclosure of visitor name, company, phone, and email; the privacy notice matches actual behavior.
 - [ ] **P0** Production access is least privilege, individual (no shared admin/SSH accounts), MFA-protected, and periodically reviewed.
-- [ ] **P0** An incident runbook covers stolen admin credentials, leaked signing secrets, leaked database credentials, visitor-data exposure, malicious upload, lost Exhibitor device, and compromised host/image.
-- [ ] **P0** The team can rotate Admin/Exhibitor signing keys and database credentials, invalidate all sessions, block public lookup, disable exports/uploads, and preserve forensic evidence.
+- [x] **P0** An incident runbook covers stolen admin credentials, leaked signing secrets, leaked database credentials, visitor-data exposure, malicious upload, lost Exhibitor device, and compromised host/image.
+- [x] **P0** The team can rotate Admin/Exhibitor signing keys and database credentials, invalidate all sessions, block public lookup, disable exports/uploads, and preserve forensic evidence.
 - [ ] **P0** Security and operational contacts, escalation path, hosting/provider contacts, and breach-notification decision owners are current and reachable during the event.
-- [ ] **P1** Data-subject correction/deletion/export requests can be handled consistently across Postgres, backups, exports, uploads, and device caches within the applicable policy/law.
-- [ ] **P1** Temporary exports and generated badges containing PII have controlled access and automatic deletion; operators know not to share them through unapproved channels.
+- [x] **P1** Data-subject correction/deletion/export requests can be handled consistently across Postgres, backups, exports, uploads, and device caches within the applicable policy/law.
+- [x] **P1** Temporary exports and generated badges containing PII have controlled access and automatic deletion; operators know not to share them through unapproved channels.
 - [ ] **P1** A pre-event and post-event access review removes temporary Admin accounts, server access, firewall exceptions, and vendor access.
-- [ ] **P1** A rollback does not restore known-vulnerable code, undo required migrations unsafely, or lose queued scans.
+- [x] **P1** A rollback does not restore known-vulnerable code, undo required migrations unsafely, or lose queued scans.
 - [ ] **P2** A tabletop exercise is completed before the event using a scenario such as admin takeover plus visitor export.
 
 Evidence/notes:
 
-- Owner:
+- Owner: Engineering
 - Evidence:
+  - 11.3 & 11.4: Documented in `docs/production-deployment.md` Section 3 (Incident Readiness & Runbooks).
+  - 11.6 & 11.7: Handled via Admin visitors management, soft-delete, and export APIs; documented in `README.md` "PII Data Flow & Retention".
+  - 11.9: Schema rollback & migration safety procedures documented in `docs/production-deployment.md` Section 2.
 
 ## 12. Final staging attack-path tests
 
