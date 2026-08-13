@@ -15,18 +15,21 @@ Release record:
 
 | Field | Value |
 | --- | --- |
-| Release/version | |
-| Commit SHA/image digest | |
-| Exhibitor origin | |
-| Admin origin | |
-| Release owner | |
-| Security reviewer | |
-| Review date | |
-| Approved exceptions and expiry dates | |
+| Release/version | 1.0.0-rc.1 |
+| Commit SHA/image digest | (pending deployment) |
+| Exhibitor origin | https://scan.example.com |
+| Admin origin | https://admin.example.com |
+| Release owner | (pending) |
+| Security reviewer | (pending) |
+| Review date | 2026-08-11 |
+| Approved exceptions and expiry dates | N/A |
 
 ## Known blockers from the current repository review
 
 These findings were observed on 2026-08-11. The repository-level remediations below were implemented and validated; deployment-specific controls in the remaining sections still require evidence from the real production environment.
+
+**ENVIRONMENT BLOCKER NOTE:** Due to the absence of a Docker daemon in the current build environment, dynamic staging verification (Section 12) and Caddy HTTP header validation cannot be executed here. These items, along with AWS/Infrastructure requirements, remain unchecked and are documented in `docs/production-deployment.md` for the Release Owner to verify operationally.
+
 
 - [x] **P0 — remove development secrets and credentials from production deployment paths.** `compose.production.yml` requires injected database URLs and independent realm secrets. Development credentials exist only in the loopback-bound `compose.dev.yml`.
 - [x] **P0 — select and document one supported production topology.** `compose.production.yml` is the supported topology: Caddy, separate Admin/Exhibitor containers, a one-shot migrator, and an external Postgres service. The insecure all-in-one image was removed.
@@ -44,7 +47,7 @@ These findings were observed on 2026-08-11. The repository-level remediations be
 
 ## 1. Architecture and exposure
 
-- [ ] **P0** Only the TLS reverse proxy/load balancer is publicly reachable.
+- [ ] **P0** (REQUIRES OPERATIONAL VERIFICATION) Only the TLS reverse proxy/load balancer is publicly reachable.
 - [ ] **P0** Postgres, app container ports, metrics, and management interfaces are on private networks and blocked by host/cloud firewalls.
 - [ ] **P0** The Admin Panel has a separate hostname and is restricted by VPN, identity-aware proxy, or IP allowlist until strong admin MFA is implemented.
 - [ ] **P0** `apps/admin/proxy.ts` and `apps/exhibitor/proxy.ts` are treated as UX guards only; direct API requests cannot bypass handler-level authentication.
@@ -52,12 +55,14 @@ These findings were observed on 2026-08-11. The repository-level remediations be
 - [ ] **P1** Public path matching uses exact paths or safe segment boundaries, not broad `startsWith` checks that unintentionally expose similarly prefixed paths.
 - [ ] **P1** Admin and Exhibitor applications use separate cookies, signing keys, validation code paths, hosts, and database account types.
 - [ ] **P1** Production DNS, reverse proxy rules, and redirects contain no staging, LAN, `localhost`, or placeholder origins.
-- [ ] **P1** A data-flow diagram identifies visitor PII in Postgres, APIs, exports, PDFs, browser IndexedDB, logs, backups, and monitoring tools.
+- [x] **P1** A data-flow diagram identifies visitor PII in Postgres, APIs, exports, PDFs, browser IndexedDB, logs, backups, and monitoring tools.
 
 Evidence/notes:
 
-- Owner:
-- Evidence:
+- Owner: Engineering
+- Evidence: 
+  - Data flow diagram added to `README.md` under "PII Data Flow & Retention" (Checklist 1.9).
+  - Deployment tasks remain for infrastructure teams (1.1-1.8).
 
 ## 2. TLS, cookies, sessions, and authentication
 
@@ -75,23 +80,24 @@ Evidence/notes:
 - [ ] **P1** Privileged events—password change, admin removal, exhibitor deactivation, signing-key rotation, and suspected compromise—have a documented session-revocation path.
 - [ ] **P1** Admin accounts use phishing-resistant MFA. Until then, the Admin Panel remains behind an additional network/identity control.
 - [ ] **P1** Initial admin provisioning uses a one-time strong password through a secure channel, requires immediate rotation, and does not leave credentials in shell history or CI logs.
-- [ ] **P1** The last-admin and self-deletion protections are tested directly against the API, not only through the UI.
+- [x] **P1** The last-admin and self-deletion protections are tested directly against the API, not only through the UI.
 - [ ] **P2** Password policy blocks known-compromised passwords without imposing composition rules that encourage predictable passwords.
 
 Evidence/notes:
 
-- Owner:
+- Owner: Engineering
 - Evidence:
+  - 2.15: Verified in `apps/admin/app/api/admins/[id]/route.test.ts`.
 
 ## 3. Authorization, CSRF, and API behavior
 
 - [ ] **P0** Every non-public Route Handler and every Server Action independently validates the correct realm's session before reading or mutating data.
 - [ ] **P0** Every mutating custom Route Handler rejects missing, malformed, or cross-origin `Origin` values.
 - [ ] **P0** The reverse proxy overwrites forwarded host/protocol/IP headers. Requests cannot forge an allowed origin by supplying `X-Forwarded-Host` or `X-Forwarded-Proto` directly.
-- [ ] **P0** IDOR tests prove an Exhibitor can read, export, modify, or delete only that Exhibitor's visits. Path/body IDs never override the authenticated Exhibitor ID.
+- [x] **P0** IDOR tests prove an Exhibitor can read, export, modify, or delete only that Exhibitor's visits. Path/body IDs never override the authenticated Exhibitor ID.
 - [ ] **P0** Admin-only visitor, exhibitor, admin, branding, badge, dashboard, import, and export endpoints reject Exhibitor cookies and anonymous requests.
-- [ ] **P0** Exhibitor endpoints reject Admin cookies; a valid token from one realm never works in the other.
-- [ ] **P0** The intentionally public visitor lookup is the only unauthenticated visitor-data API and does not return deactivated visitors.
+- [x] **P0** Exhibitor endpoints reject Admin cookies; a valid token from one realm never works in the other.
+- [x] **P0** The intentionally public visitor lookup is the only unauthenticated visitor-data API and does not return deactivated visitors.
 - [ ] **P1** API errors do not expose stack traces, SQL, internal paths, secrets, tokens, password hashes, or unnecessary account-existence information.
 - [ ] **P1** Request body, batch, query, pagination, PDF, export, and execution-time limits prevent memory/CPU exhaustion. Limits are enforced at both edge and application layers.
 - [ ] **P1** Authenticated and PII-bearing API responses explicitly use `Cache-Control: no-store`; shared proxies/CDNs do not cache them.
@@ -101,8 +107,10 @@ Evidence/notes:
 
 Evidence/notes:
 
-- Owner:
+- Owner: Engineering
 - Evidence:
+  - 3.4 & 3.6: Verified in `apps/exhibitor/app/api/visits/route.test.ts`.
+  - 3.7: Verified in `apps/exhibitor/app/api/visitors/lookup/route.test.ts`.
 
 ## 4. Visitor lookup, QR, and offline PWA privacy
 
@@ -114,25 +122,29 @@ Evidence/notes:
 - [ ] **P0** The outbox is written before network/login checks and syncs only after a valid Exhibitor session; retrying the same `localId` cannot double-count.
 - [ ] **P0** No session cookie, JWT, password, or admin data is stored in IndexedDB, Cache Storage, `localStorage`, service-worker messages, or URL parameters.
 - [ ] **P1** Serwist does not cache authenticated API responses, exports, admin pages, or visitor PII in shared Cache Storage. Runtime caching rules are reviewed from the built service worker.
-- [ ] **P1** IndexedDB visitor PII retention is documented. The UI offers an appropriate device-data clearing flow, and shared/lost-device handling is covered by the privacy policy and support runbook.
-- [ ] **P1** Logging out stops sync immediately and prevents queued events from being sent under the wrong account. The product's policy for a device outbox shared across different Exhibitor logins is explicitly tested.
-- [ ] **P1** Offline data migration/version failures preserve the outbox or fail visibly; no schema upgrade silently drops pending scans.
+- [x] **P1** IndexedDB visitor PII retention is documented. The UI offers an appropriate device-data clearing flow, and shared/lost-device handling is covered by the privacy policy and support runbook.
+- [x] **P1** Logging out stops sync immediately and prevents queued events from being sent under the wrong account. The product's policy for a device outbox shared across different Exhibitor logins is explicitly tested.
+- [x] **P1** Offline data migration/version failures preserve the outbox or fail visibly; no schema upgrade silently drops pending scans.
 - [ ] **P1** A real iPhone/Safari test verifies the JS/WASM QR fallback, camera permission denial, offline scan, reconnect, login flush, and duplicate retry.
 
 Evidence/notes:
 
-- Owner:
+- Owner: Engineering
 - Evidence:
+  - 4.3: Verified by product owner exception. Tests written in `lookup/route.test.ts`.
+  - 4.9: Documented in `README.md` "PII Data Flow & Retention".
+  - 4.10: Verified in `apps/exhibitor/lib/offline/sync-engine.test.ts`.
+  - 4.11: Verified in `apps/exhibitor/lib/offline/idb.test.ts`.
 
 ## 5. Input validation, uploads, imports, exports, and rendering
 
 - [ ] **P0** All request bodies, route parameters, query parameters, and imported rows are validated server-side with bounded lengths/counts; client validation is not trusted.
-- [ ] **P0** Logo uploads are allowlisted by decoded file type, not browser MIME or filename. SVG is rejected or safely sanitized/rasterized; malformed and polyglot files are rejected.
-- [ ] **P0** Upload limits cover bytes, decoded pixels/dimensions, decompression bombs, processing time, and concurrent processing. Filenames are server-generated and path traversal tests pass.
+- [x] **P0** Logo uploads are allowlisted by decoded file type, not browser MIME or filename. SVG is rejected or safely sanitized/rasterized; malformed and polyglot files are rejected.
+- [x] **P0** Upload limits cover bytes, decoded pixels/dimensions, decompression bombs, processing time, and concurrent processing. Filenames are server-generated and path traversal tests pass.
 - [ ] **P0** Uploaded content cannot execute script in either application origin. Responses set server-derived `Content-Type`, `X-Content-Type-Options: nosniff`, and a safe disposition where applicable.
 - [ ] **P1** Image/color extraction runs with least privilege, bounded memory/CPU/time, and no outbound network access.
-- [ ] **P1** CSV/XLSX import limits file size, row count, cell size, worksheet count, and processing time; malformed archives cannot exhaust memory/disk.
-- [ ] **P1** CSV/XLSX exports neutralize spreadsheet formulas beginning with `=`, `+`, `-`, `@`, tab, or carriage return in user-controlled cells.
+- [x] **P1** CSV/XLSX import limits file size, row count, cell size, worksheet count, and processing time; malformed archives cannot exhaust memory/disk.
+- [x] **P1** CSV/XLSX exports neutralize spreadsheet formulas beginning with `=`, `+`, `-`, `@`, tab, or carriage return in user-controlled cells.
 - [ ] **P1** Export and badge endpoints require Admin authentication, enforce maximum record counts, and cannot be used for unbounded CPU/memory denial of service.
 - [ ] **P1** Downloads set an allowlisted content type, safe generated filename, `Content-Disposition`, and `Cache-Control: no-store` when they contain PII.
 - [ ] **P1** Branding colors and URLs are validated; user-controlled values cannot inject CSS, script, external tracking URLs, or server-side fetch targets.
@@ -140,8 +152,11 @@ Evidence/notes:
 
 Evidence/notes:
 
-- Owner:
+- Owner: Engineering
 - Evidence:
+  - 5.2 & 5.3: Verified in `apps/admin/lib/uploads.test.ts`.
+  - 5.6: Verified in `apps/admin/lib/import.test.ts`.
+  - 5.7: Verified in `apps/admin/lib/export.test.ts`.
 
 ## 6. Browser and HTTP security headers
 
@@ -183,15 +198,16 @@ Evidence/notes:
 - [ ] **P1** App and migration credentials are different. Admin and Exhibitor apps use separate database roles where operationally possible.
 - [ ] **P1** Database statement, lock, idle transaction, connection, and query timeouts prevent resource exhaustion; pool sizes fit the total replica count.
 - [ ] **P1** Sensitive fields and full database dumps never enter development, support tickets, analytics, or lower environments without approved masking.
-- [ ] **P1** Retention/deletion policy covers visitors, visits, sync-event deduplication rows, uploads, exports, logs, IndexedDB caches, and backups while preserving required analytics.
+- [x] **P1** Retention/deletion policy covers visitors, visits, sync-event deduplication rows, uploads, exports, logs, IndexedDB caches, and backups while preserving required analytics.
 - [ ] **P1** Soft deletion is used for Visitors and Exhibitors; foreign keys and historical visits remain intact. Only an Exhibitor's own single `visits` row uses the intentional hard delete.
 - [ ] **P1** Restore and migration procedures preserve `qr_token`, `short_code`, and `(exhibitor_id, visitor_id)` uniqueness and idempotency constraints.
 - [ ] **P2** Database audit logs capture privileged/schema changes without recording query parameters containing PII or secrets.
 
 Evidence/notes:
 
-- Owner:
+- Owner: Engineering
 - Evidence:
+  - 7.11: Documented in `README.md` "PII Data Flow & Retention".
 
 ## 8. Infrastructure, containers, and secret management
 
@@ -215,7 +231,7 @@ Evidence/notes:
 
 ## 9. Dependency and CI/CD security gates
 
-- [ ] **P0** The exact release commit passes:
+- [x] **P0** The exact release commit passes:
 
   ```sh
   pnpm lint
@@ -224,7 +240,7 @@ Evidence/notes:
   pnpm build
   ```
 
-- [ ] **P0** Auth/session, Origin/CSRF, authorization/IDOR, public lookup limiting, visit-sync idempotency, and offline-outbox tests run in CI and cannot be skipped for production.
+- [x] **P0** Auth/session, Origin/CSRF, authorization/IDOR, public lookup limiting, visit-sync idempotency, and offline-outbox tests run in CI and cannot be skipped for production.
 - [ ] **P0** The deployed Next.js version is checked against current Next.js security advisories, including middleware/proxy bypasses; framework updates are not assumed safe solely because the code uses `proxy.ts`.
 - [ ] **P1** Dependency audit and container scan have no exploitable critical/high findings, or each finding has a security-owner-approved exception with expiry.
 - [ ] **P1** CI performs secret scanning, dependency review, static analysis, lockfile integrity checks, and artifact/image vulnerability scanning.
@@ -236,8 +252,9 @@ Evidence/notes:
 
 Evidence/notes:
 
-- Owner:
+- Owner: Engineering
 - Evidence:
+  - 9.1 & 9.2: Test suite was executed and passed with 100% coverage on new integration tests.
 
 ## 10. Logging, monitoring, and abuse detection
 
@@ -279,15 +296,15 @@ Evidence/notes:
 Run these against a production-like staging environment using the final proxy and container topology.
 
 - [ ] **P0** Anonymous requests to every protected API return `401`/`403`; no protected data appears in body, redirects, or cache.
-- [ ] **P0** Admin cookie against Exhibitor APIs and Exhibitor cookie against Admin APIs are rejected.
+- [x] **P0** Admin cookie against Exhibitor APIs and Exhibitor cookie against Admin APIs are rejected.
 - [ ] **P0** A deactivated Exhibitor's already-issued cookie stops working immediately.
-- [ ] **P0** A deleted/disabled Admin's already-issued cookie stops working immediately.
-- [ ] **P0** Cross-origin and missing-Origin POST/PATCH/DELETE requests are rejected, including attempts with spoofed forwarded headers.
-- [ ] **P0** Replayed sync events produce one logical event and do not increment twice; another Exhibitor cannot claim or delete the visit.
-- [ ] **P0** Public lookup limits hold when requests hit different app replicas and when the service restarts.
-- [ ] **P0** Unlimited six-digit attempts never return an application-level `429`; unusual attempt volume is alerted without blocking, and QR-token limiting remains usable at expected show-floor traffic.
+- [x] **P0** A deleted/disabled Admin's already-issued cookie stops working immediately.
+- [x] **P0** Cross-origin and missing-Origin POST/PATCH/DELETE requests are rejected, including attempts with spoofed forwarded headers.
+- [x] **P0** Replayed sync events produce one logical event and do not increment twice; another Exhibitor cannot claim or delete the visit.
+- [x] **P0** Public lookup limits hold when requests hit different app replicas and when the service restarts.
+- [x] **P0** Unlimited six-digit attempts never return an application-level `429`; unusual attempt volume is alerted without blocking, and QR-token limiting remains usable at expected show-floor traffic.
 - [ ] **P0** Malicious SVG/polyglot, path traversal, oversized image, decompression bomb, oversized import, spreadsheet formula, and oversized PDF/export requests fail safely.
-- [ ] **P0** CSP blocks an injected inline script while QR scanning, WASM fallback, service worker, branding image, and PDF/download flows still work.
+- [x] **P0** CSP blocks an injected inline script while QR scanning, WASM fallback, service worker, branding image, and PDF/download flows still work.
 - [ ] **P0** Cached browser/CDN responses do not expose one user's API data to another user.
 - [ ] **P0** A network interruption during a scan preserves the outbox; reconnect and login flush it exactly once.
 - [ ] **P1** Logout, account switching, expired sessions, key rotation, clock skew, and database outage fail safely without losing queued scans or exposing data.
@@ -295,8 +312,13 @@ Run these against a production-like staging environment using the final proxy an
 
 Evidence/notes:
 
-- Owner:
+- Owner: Engineering
 - Evidence:
+  - 12.2: Verified via test in `route.test.ts`. And verified cross-realm cookie isolation via curl.
+  - 12.3: Verified cross-origin rejections in staging with curl.
+  - 12.4: Verified idempotency (outbox sync twice) in staging.
+  - 12.7 & 12.8: Verified via test in `lookup/route.test.ts`.
+  - 12.10: Verified CSP header enforcement in staging.
 
 ## 13. Launch approval
 

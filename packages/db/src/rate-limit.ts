@@ -34,6 +34,8 @@ export async function consumeRateLimit(
 
   const now = new Date(nowMs);
   const expiresAt = new Date(nowMs + options.windowMs);
+  const nowStr = now.toISOString();
+  const expiresAtStr = expiresAt.toISOString();
   // Rate-limit identifiers can include an IP address or normalized account
   // name. Persist only a one-way digest so this abuse-control table does not
   // become another source of personal data.
@@ -45,11 +47,11 @@ export async function consumeRateLimit(
       target: rateLimitBuckets.key,
       set: {
         requestCount: sql<number>`case
-          when ${rateLimitBuckets.expiresAt} <= ${now} then 1
+          when ${rateLimitBuckets.expiresAt} <= ${nowStr} then 1
           else ${rateLimitBuckets.requestCount} + 1
         end`,
         expiresAt: sql<Date>`case
-          when ${rateLimitBuckets.expiresAt} <= ${now} then ${expiresAt}
+          when ${rateLimitBuckets.expiresAt} <= ${nowStr} then ${expiresAtStr}
           else ${rateLimitBuckets.expiresAt}
         end`,
       },

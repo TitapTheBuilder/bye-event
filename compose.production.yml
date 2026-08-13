@@ -9,6 +9,7 @@ services:
         BASE_IMAGE: ${BASE_IMAGE:-docker.arvancloud.ir/node:22-alpine}
     environment:
       MIGRATION_DATABASE_URL: ${MIGRATION_DATABASE_URL:?set MIGRATION_DATABASE_URL}
+      COREPACK_HOME: /tmp/corepack
     restart: "no"
     init: true
     read_only: true
@@ -38,6 +39,7 @@ services:
       TRUST_PROXY: "1"
       ALLOW_INSECURE_DATABASE: ${ALLOW_INSECURE_DATABASE:-0}
       NODE_ENV: production
+      COREPACK_HOME: /tmp/corepack
     expose: ["3000"]
     read_only: true
     tmpfs:
@@ -76,6 +78,7 @@ services:
       ALLOW_INSECURE_DATABASE: ${ALLOW_INSECURE_DATABASE:-0}
       NODE_ENV: production
       UPLOADS_DIR: /app/uploads
+      COREPACK_HOME: /tmp/corepack
     expose: ["3000"]
     read_only: true
     tmpfs:

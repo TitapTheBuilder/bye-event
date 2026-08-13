@@ -13,7 +13,7 @@ FROM base AS runner
 WORKDIR /app
 COPY --from=pruner --chown=node:node /app/out/json/ .
 COPY --from=pruner --chown=node:node /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --fetch-timeout 600000
 COPY --from=pruner --chown=node:node /app/out/full/ .
 USER node
 ENV NODE_ENV=production

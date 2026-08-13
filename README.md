@@ -4,6 +4,30 @@ This repository contains the Exhibition System, consisting of two Next.js applic
 
 Before an internet-facing release, complete the [Production Security Release Checklist](docs/production-security-checklist.md). Its P0 items are launch blockers for both applications.
 
+## PII Data Flow & Retention
+
+The following diagram tracks the lifecycle of visitor PII and offline queue caching:
+
+```mermaid
+sequenceDiagram
+    participant User (Offline)
+    participant IndexedDB Outbox
+    participant Exhibitor App
+    participant Admin Panel
+    participant Postgres DB
+    
+    User (Offline)->>IndexedDB Outbox: 1. Scans badge locally
+    Note over IndexedDB Outbox: PII remains on-device only (Checklist 4.5/4.7/4.9)
+    IndexedDB Outbox->>Exhibitor App: 2. Auth+Online -> Queue Flushed
+    Exhibitor App->>Postgres DB: 3. Idempotent Sync (via `localId`)
+    Note over Postgres DB: Data securely stored in visits/visitors
+    Postgres DB->>Admin Panel: 4. Export / Review
+```
+
+**PII Retention Policy:**
+- **IndexedDB**: Offline data (scans and cached visitors) is held indefinitely until it successfully syncs, or the user logs out. Logging out explicitly clears PII from the local cache to prevent cross-account contamination.
+- **Database**: Visitor and exhibitor records are soft-deleted via `deactivatedAt` to preserve analytics. Full data retention duration is governed by operational policy. 
+
 ## Prerequisites
 
 - **Node.js**: >= 22
@@ -93,10 +117,22 @@ Both apps will bind to `0.0.0.0`, making them accessible from other devices on y
 
 ---
 
-## 4. Running entirely via Docker Compose
+## 4. Deploying to Production via Docker Compose
 
-To run the entire stack (Database, Admin App, and Exhibitor App) in isolated containers, simply run:
-```bash
-docker-compose up -d
-```
-This is the recommended way to deploy the application to a production server. It will automatically build the Next.js Dockerfiles and start them.
+To deploy the production-hardened topology (Caddy reverse proxy + read-only Node.js containers with least-privilege egress), use `compose.production.yml`.
+
+> [!CAUTION]
+> Before deploying, you MUST complete the operational tasks documented in the [Production Deployment & Operational Runbook](docs/production-deployment.md). This includes running Staging Section 12 Verification tests, provisioning network firewalls, and documenting MFA exception approvals.
+
+1. Copy `.env.production.example` to `.env.production` and provide real secure values:
+   ```bash
+   cp .env.production.example .env.production
+   # Edit .env.production to set actual domains, secure secrets, and IP allowlists
+   ```
+
+2. Build and start the production stack:
+   ```bash
+   docker-compose -f compose.production.yml --env-file .env.production up -d --build
+   ```
+
+3. The system will provision HTTPS via Let's Encrypt automatically. The Admin Panel is restricted exclusively to the `ADMIN_ALLOWED_CIDRS` defined in your environment.

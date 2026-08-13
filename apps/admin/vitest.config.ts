@@ -12,5 +12,8 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    env: {
+      DATABASE_URL: "postgres://build:build@127.0.0.1:5432/build"
+    }
   },
 });
