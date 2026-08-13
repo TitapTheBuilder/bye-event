@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "./env";
 import { hashPassword } from "@repo/shared/auth";
 import { db } from "./client";
 import { createExhibitor, getExhibitorByUsername } from "./exhibitors";

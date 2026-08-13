@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "./env";
 import { hashPassword } from "@repo/shared/auth";
 import { createAdmin, getAdminByEmail } from "./admins";
 import { db } from "./client";
