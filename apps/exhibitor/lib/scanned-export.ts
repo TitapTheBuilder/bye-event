@@ -1,6 +1,16 @@
-import type { ScannedVisitorRow } from "@repo/db";
-
 export const MAX_SCANNED_EXPORT_RECORDS = 5000;
+
+export interface ExportableScannedVisitor {
+  firstName: string | null;
+  lastName: string | null;
+  company: string | null;
+  phoneNumber: string | null;
+  email: string | null;
+  visitorType?: "invited" | "guest" | string | null;
+  scanCount?: number | null;
+  scannedAt?: string | Date | null;
+  lastScannedAt?: string | Date | null;
+}
 
 const CSV_HEADERS = [
   "firstName",
@@ -19,7 +29,7 @@ function csvCell(value: string | number | null): string {
   return `"${text.replaceAll('"', '""')}"`;
 }
 
-export function serializeScannedVisitorsCsv(rows: ScannedVisitorRow[]): string {
+export function serializeScannedVisitorsCsv(rows: ExportableScannedVisitor[]): string {
   if (rows.length > MAX_SCANNED_EXPORT_RECORDS) {
     throw new RangeError(
       `Export cannot contain more than ${MAX_SCANNED_EXPORT_RECORDS} records`,
@@ -28,6 +38,14 @@ export function serializeScannedVisitorsCsv(rows: ScannedVisitorRow[]): string {
 
   const lines = [CSV_HEADERS.map(csvCell).join(",")];
   for (const row of rows) {
+    const timestamp = row.lastScannedAt ?? row.scannedAt;
+    const dateStr =
+      timestamp instanceof Date
+        ? timestamp.toISOString()
+        : typeof timestamp === "string"
+          ? timestamp
+          : "";
+
     lines.push(
       [
         row.firstName,
@@ -35,9 +53,9 @@ export function serializeScannedVisitorsCsv(rows: ScannedVisitorRow[]): string {
         row.company,
         row.phoneNumber,
         row.email,
-        row.visitorType,
-        row.scanCount,
-        row.lastScannedAt.toISOString(),
+        row.visitorType ?? "invited",
+        row.scanCount ?? 1,
+        dateStr,
       ]
         .map(csvCell)
         .join(","),

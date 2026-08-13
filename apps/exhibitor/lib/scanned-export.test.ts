@@ -30,6 +30,35 @@ describe("serializeScannedVisitorsCsv", () => {
     expect(csv).not.toContain(row.qrToken);
   });
 
+  it("exports offline outbox items with ISO string timestamps", () => {
+    const offlineItems = [
+      {
+        firstName: "Grace",
+        lastName: "Hopper",
+        company: "US Navy",
+        phoneNumber: "+1 555 0199",
+        email: "grace@example.com",
+        visitorType: "invited" as const,
+        scannedAt: "2026-08-14T02:00:00.000Z",
+      },
+      {
+        firstName: null,
+        lastName: null,
+        company: null,
+        phoneNumber: null,
+        email: null,
+        visitorType: "guest" as const,
+        scannedAt: "2026-08-14T02:15:00.000Z",
+      },
+    ];
+
+    const csv = serializeScannedVisitorsCsv(offlineItems);
+
+    expect(csv.startsWith("\uFEFF")).toBe(true);
+    expect(csv).toContain('"Grace","Hopper","US Navy","\'+1 555 0199","grace@example.com","invited","1","2026-08-14T02:00:00.000Z"');
+    expect(csv).toContain('"","","","","","guest","1","2026-08-14T02:15:00.000Z"');
+  });
+
   it.each(["=1+1", "+1+1", "-1+1", "@SUM(1,1)", "\t=1+1", "\r=1+1"])(
     "neutralizes spreadsheet formula prefix in %j",
     (company) => {

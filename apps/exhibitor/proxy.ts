@@ -2,7 +2,7 @@ import { verifySessionToken } from "@repo/shared/auth/session";
 import { EXHIBITOR_SESSION_COOKIE } from "@repo/shared/constants";
 import { type NextRequest, NextResponse } from "next/server";
 
-const AUTH_REQUIRED_PREFIXES = ["/scanned", "/profile"];
+const AUTH_REQUIRED_PREFIXES = ["/profile"];
 
 function createContentSecurityPolicy(nonce: string): string {
   const developmentEval = process.env.NODE_ENV === "production" ? "" : " 'unsafe-eval'";

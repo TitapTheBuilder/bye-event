@@ -153,11 +153,24 @@ const IconBriefcase = ({ color = "#94a3b8", size = 10 }) => (
   </Svg>
 );
 
+export interface PdfScannedVisitorRow {
+  visitorId?: string;
+  firstName: string | null;
+  lastName: string | null;
+  company: string | null;
+  phoneNumber: string | null;
+  email: string | null;
+  visitorType?: "invited" | "guest" | string | null;
+  scanCount?: number | null;
+  lastScannedAt?: string | Date | null;
+  scannedAt?: string | Date | null;
+}
+
 function ScannedVisitorsDocument({
   rows,
   exhibitorName,
 }: {
-  rows: ScannedVisitorRow[];
+  rows: PdfScannedVisitorRow[];
   exhibitorName: string;
 }) {
   return (
@@ -169,12 +182,16 @@ function ScannedVisitorsDocument({
         </View>
         
         <View style={styles.grid}>
-          {rows.map((row) => {
+          {rows.map((row, idx) => {
             const name = formatPersonName(row.firstName, row.lastName) || "Guest visitor";
             const isInvited = row.visitorType === "invited";
+            const timestamp = row.lastScannedAt ?? row.scannedAt;
+            const dateDisplay = timestamp
+              ? new Date(timestamp).toLocaleString()
+              : "";
             
             return (
-              <View key={row.visitorId} style={styles.card} wrap={false}>
+              <View key={row.visitorId ?? `row-${idx}`} style={styles.card} wrap={false}>
                 <View style={styles.cardHeader}>
                   <View style={styles.nameContainer}>
                     <Text style={textStyle(name, styles.name)}>{name}</Text>
@@ -206,11 +223,11 @@ function ScannedVisitorsDocument({
                   </View>
                 ) : null}
 
-                <View style={styles.footer}>
-                  <Text style={styles.footerText}>
-                    {new Date(row.lastScannedAt).toLocaleString()}
-                  </Text>
-                </View>
+                {dateDisplay ? (
+                  <View style={styles.footer}>
+                    <Text style={styles.footerText}>{dateDisplay}</Text>
+                  </View>
+                ) : null}
               </View>
             );
           })}
@@ -221,7 +238,7 @@ function ScannedVisitorsDocument({
 }
 
 export async function generateScannedVisitorsPdf(
-  rows: ScannedVisitorRow[],
+  rows: PdfScannedVisitorRow[],
   exhibitorName: string,
 ): Promise<Buffer> {
   return renderToBuffer(<ScannedVisitorsDocument rows={rows} exhibitorName={exhibitorName} />);

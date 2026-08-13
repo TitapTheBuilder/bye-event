@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/client/auth-context";
 import { useTranslation } from "@/lib/client/language-context";
 import { useToast } from "@/lib/client/toast";
 import { type ScannedListItem, useScannedList } from "@/lib/client/use-scanned-list";
+import { serializeScannedVisitorsCsv } from "@/lib/scanned-export";
 
 export default function ScannedListPage() {
   const { items, search, setSearch, isLoading, remove } = useScannedList();
@@ -18,16 +19,61 @@ export default function ScannedListPage() {
   const [exportError, setExportError] = useState<string | null>(null);
 
   async function handleExport(format: "csv" | "pdf") {
+    if (items.length === 0) return;
     setExporting(format);
     setExportError(null);
+
+    const date = new Date().toISOString().slice(0, 10);
+    const filename = `scanned-visitors-${date}.${format}`;
+
+    if (format === "csv") {
+      try {
+        const csvContent = serializeScannedVisitorsCsv(items);
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+      } catch {
+        setExportError(t("scanned.exportError"));
+      } finally {
+        setExporting(null);
+      }
+      return;
+    }
+
     try {
-      const response = await fetch(`/api/visits/export?format=${format}`);
+      const exhibitorName = exhibitor
+        ? formatPersonName(exhibitor.firstName, exhibitor.lastName)
+        : "Exhibitor";
+      const response = await fetch("/api/visits/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          format: "pdf",
+          exhibitorName,
+          items: items.map((item) => ({
+            visitorId: item.visitorId ?? item.localId ?? item.key,
+            firstName: item.firstName,
+            lastName: item.lastName,
+            company: item.company,
+            phoneNumber: item.phoneNumber,
+            email: item.email,
+            visitorType: item.visitorType ?? "invited",
+            lastScannedAt: item.scannedAt,
+          })),
+        }),
+      });
       if (!response.ok) throw new Error("Export failed");
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `scanned-visitors-${new Date().toISOString().slice(0, 10)}.${format}`;
+      link.download = filename;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -54,23 +100,21 @@ export default function ScannedListPage() {
     <div className="flex flex-col gap-4 px-6 py-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold text-text-primary">{t("scanned.title")}</h1>
-        {exhibitor ? (
-          <div className="flex gap-2">
-            {(["csv", "pdf"] as const).map((format) => (
-              <button
-                key={format}
-                type="button"
-                disabled={exporting !== null}
-                onClick={() => void handleExport(format)}
-                className="min-h-11 rounded-xl border border-border-subtle bg-surface-1 px-3 text-sm font-medium text-text-primary disabled:opacity-60"
-              >
-                {exporting === format
-                  ? t("scanned.exporting")
-                  : t(format === "csv" ? "scanned.exportCsv" : "scanned.exportPdf")}
-              </button>
-            ))}
-          </div>
-        ) : null}
+        <div className="flex gap-2">
+          {(["csv", "pdf"] as const).map((format) => (
+            <button
+              key={format}
+              type="button"
+              disabled={exporting !== null || items.length === 0}
+              onClick={() => void handleExport(format)}
+              className="min-h-11 rounded-xl border border-border-subtle bg-surface-1 px-3 text-sm font-medium text-text-primary disabled:opacity-40"
+            >
+              {exporting === format
+                ? t("scanned.exporting")
+                : t(format === "csv" ? "scanned.exportCsv" : "scanned.exportPdf")}
+            </button>
+          ))}
+        </div>
       </div>
 
       {exportError ? <p className="text-sm text-danger">{exportError}</p> : null}
