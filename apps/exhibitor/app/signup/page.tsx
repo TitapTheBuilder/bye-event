@@ -1,16 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { FormField, inputClassName } from "@/components/FormField";
 import { useAuth } from "@/lib/client/auth-context";
 import { useTranslation } from "@/lib/client/language-context";
 
 export default function SignupPage() {
-  const { signup } = useAuth();
+  const { exhibitor, isLoading, signup } = useAuth();
   const { t } = useTranslation();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -21,6 +22,15 @@ export default function SignupPage() {
   });
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const nextParam = searchParams.get("next");
+  const targetDestination = nextParam && nextParam.startsWith("/") ? nextParam : "/profile";
+
+  useEffect(() => {
+    if (!isLoading && exhibitor) {
+      router.replace(targetDestination);
+    }
+  }, [isLoading, exhibitor, targetDestination, router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -37,7 +47,15 @@ export default function SignupPage() {
       return;
     }
     router.refresh();
-    router.push("/");
+    router.replace(targetDestination);
+  }
+
+  if (isLoading || exhibitor) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <p className="text-sm text-text-secondary">{t("common.loading")}</p>
+      </div>
+    );
   }
 
   return (

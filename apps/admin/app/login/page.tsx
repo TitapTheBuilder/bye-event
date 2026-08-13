@@ -4,17 +4,26 @@ import { FormField, inputClassName } from "@/components/FormField";
 import { useAuth } from "@/lib/client/auth-context";
 import { useTranslation } from "@/lib/client/language-context";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function LoginPage() {
   const { t } = useTranslation();
-  const { login } = useAuth();
+  const { admin, isLoading, login } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const nextParam = searchParams.get("next");
+  const targetDestination = nextParam && nextParam.startsWith("/") ? nextParam : "/dashboard";
+
+  useEffect(() => {
+    if (!isLoading && admin) {
+      router.replace(targetDestination);
+    }
+  }, [isLoading, admin, targetDestination, router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -27,7 +36,15 @@ export default function LoginPage() {
       return;
     }
     router.refresh();
-    router.push(searchParams.get("next") ?? "/dashboard");
+    router.replace(targetDestination);
+  }
+
+  if (isLoading || admin) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center">
+        <p className="text-sm text-text-secondary">{t("common.loading")}</p>
+      </div>
+    );
   }
 
   return (

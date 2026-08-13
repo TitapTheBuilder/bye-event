@@ -5,10 +5,10 @@ import { useAuth } from "@/lib/client/auth-context";
 import { useTranslation } from "@/lib/client/language-context";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { exhibitor, isLoading, login } = useAuth();
   const { t } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -16,6 +16,15 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const nextParam = searchParams.get("next");
+  const targetDestination = nextParam && nextParam.startsWith("/") ? nextParam : "/profile";
+
+  useEffect(() => {
+    if (!isLoading && exhibitor) {
+      router.replace(targetDestination);
+    }
+  }, [isLoading, exhibitor, targetDestination, router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -28,7 +37,15 @@ export default function LoginPage() {
       return;
     }
     router.refresh();
-    router.push(searchParams.get("next") ?? "/");
+    router.replace(targetDestination);
+  }
+
+  if (isLoading || exhibitor) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <p className="text-sm text-text-secondary">{t("common.loading")}</p>
+      </div>
+    );
   }
 
   return (
@@ -75,7 +92,10 @@ export default function LoginPage() {
 
       <p className="text-center text-sm text-text-secondary">
         {t("login.noAccount")}{" "}
-        <Link href="/signup" className="font-medium text-brand-accent">
+        <Link
+          href={nextParam ? `/signup?next=${encodeURIComponent(nextParam)}` : "/signup"}
+          className="font-medium text-brand-accent"
+        >
           {t("login.createAccount")}
         </Link>
       </p>
