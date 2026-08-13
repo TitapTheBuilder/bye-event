@@ -1,6 +1,6 @@
 # Production Deployment & Operational Runbook
 
-This document serves as the operational guide and incident runbook for the Exhibition Visitor-Scanning Platform. It supplements the `production-security-checklist.md` by providing the required human/operational procedures that cannot be automated in the repository.
+This document serves as the operational guide and incident runbook for the Exhibition Visitor-Scanning Platform. It supplements the `production-security-checklist.md` by providing the required human/operational procedures that cannot be autoped in the repository.
 
 ## 1. Infrastructure Specifications
 
