@@ -1,8 +1,10 @@
-import { validateExhibitorEnvironment } from "@/lib/env";
-import { ensureSchema } from "@repo/db";
-
 export async function register() {
-  validateExhibitorEnvironment();
-  await ensureSchema();
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    const { validateExhibitorEnvironment } = await import("@/lib/env");
+    const { ensureSchema } = await import("@repo/db");
+    validateExhibitorEnvironment();
+    await ensureSchema();
+  }
 }
+
 
