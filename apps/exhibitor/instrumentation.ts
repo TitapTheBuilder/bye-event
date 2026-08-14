@@ -1,5 +1,8 @@
 import { validateExhibitorEnvironment } from "@/lib/env";
+import { ensureSchema } from "@repo/db";
 
-export function register() {
+export async function register() {
   validateExhibitorEnvironment();
+  await ensureSchema();
 }
+
