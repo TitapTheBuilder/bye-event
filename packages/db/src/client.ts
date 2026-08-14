@@ -51,7 +51,7 @@ function createClient() {
 
 // Reuse the connection across Next.js dev hot-reloads instead of exhausting
 // Postgres connections on every file save.
-const client = globalThis.__exhibitionDbClient ?? createClient();
+export const client = globalThis.__exhibitionDbClient ?? createClient();
 if (process.env.NODE_ENV !== "production") {
   globalThis.__exhibitionDbClient = client;
 }
