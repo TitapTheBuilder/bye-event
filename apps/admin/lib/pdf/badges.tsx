@@ -26,15 +26,17 @@ import { getLocalUploadPathFromUrl } from "@/lib/uploads";
 
 const PT_PER_IN = 72;
 const PAGE_MARGIN = 0.4 * PT_PER_IN;
-const BADGE_WIDTH = 3.5 * PT_PER_IN;
-const BADGE_HEIGHT = 2.25 * PT_PER_IN;
 const BADGE_GAP = 0.2 * PT_PER_IN;
 const BADGES_PER_ROW = 2;
 const ROWS_PER_PAGE = 4;
 const BADGES_PER_PAGE = BADGES_PER_ROW * ROWS_PER_PAGE;
 const PDF_FONT_FAMILY = "Noto Sans Arabic";
 const ARABIC_SCRIPT_PATTERN = /\p{Script=Arabic}/u;
-
+const CARD_WIDTH = 3.5 * PT_PER_IN;
+const CARD_HEIGHT = 2.25 * PT_PER_IN;
+const BADGE_SCALE = 1.4;
+const BADGE_WIDTH = CARD_HEIGHT * BADGE_SCALE;
+const BADGE_HEIGHT = CARD_WIDTH * BADGE_SCALE;
 function resolvePublicFilePath(...segments: string[]): string | undefined {
   const candidates = [
     join(process.cwd(), "public", ...segments),
@@ -107,7 +109,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderStyle: "dashed",
     borderColor: "#999999",
-    position: "relative", // <-- CRITICAL: Turns the badge into a fixed canvas, bypassing flexbox bugs
+    position: "relative",
+    overflow: "hidden",
+  },
+  badgeContent: {
+    position: "absolute",
+    left: (BADGE_WIDTH - CARD_WIDTH) / 2,
+    top: (BADGE_HEIGHT - CARD_HEIGHT) / 2,
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT,
+    transform: `rotate(90deg) scale(${BADGE_SCALE})`,
+    transformOrigin: "center",
   },
   qr: {
     position: "absolute",
@@ -237,48 +249,50 @@ function InvitedBadgesDocument({
         {pageVisitors.map((visitor) => {
             return (
               <View key={visitor.id} style={styles.badge} wrap={false}>
-                <BadgeLogos logoSource={logoSource} />
-                {visitor.shortCode ? (
-                  <Text style={styles.shortCodeText}>{visitor.shortCode}</Text>
-                ) : null}
-                <Image src={qrDataUrls.get(visitor.qrToken)} style={styles.qr} />
+                <View style={styles.badgeContent}>
+                  <BadgeLogos logoSource={logoSource} />
+                  {visitor.shortCode ? (
+                    <Text style={styles.shortCodeText}>{visitor.shortCode}</Text>
+                  ) : null}
+                  <Image src={qrDataUrls.get(visitor.qrToken)} style={styles.qr} />
 
-                <View style={styles.textColumn}>
-                  {visitor.firstName ? (
-                    <Text
-                      style={
-                        containsArabicScript(visitor.firstName)
-                          ? [styles.prominentText, styles.rtlText]
-                          : [styles.prominentText]
-                      }
-                    >
-                      {visitor.firstName}
-                    </Text>
-                  ) : null}
+                  <View style={styles.textColumn}>
+                    {visitor.firstName ? (
+                      <Text
+                        style={
+                          containsArabicScript(visitor.firstName)
+                            ? [styles.prominentText, styles.rtlText]
+                            : [styles.prominentText]
+                        }
+                      >
+                        {visitor.firstName}
+                      </Text>
+                    ) : null}
 
-                  {visitor.lastName ? (
-                    <Text
-                      style={
-                        containsArabicScript(visitor.lastName)
-                          ? [styles.prominentText, styles.rtlText]
-                          : [styles.prominentText]
-                      }
-                    >
-                      {visitor.lastName}
-                    </Text>
-                  ) : null}
-                  
-                  {visitor.company ? (
-                    <Text
-                      style={
-                        containsArabicScript(visitor.company)
-                          ? [styles.companyText, styles.rtlText]
-                          : [styles.companyText]
-                      }
-                    >
-                      {visitor.company}
-                    </Text>
-                  ) : null}
+                    {visitor.lastName ? (
+                      <Text
+                        style={
+                          containsArabicScript(visitor.lastName)
+                            ? [styles.prominentText, styles.rtlText]
+                            : [styles.prominentText]
+                        }
+                      >
+                        {visitor.lastName}
+                      </Text>
+                    ) : null}
+                    
+                    {visitor.company ? (
+                      <Text
+                        style={
+                          containsArabicScript(visitor.company)
+                            ? [styles.companyText, styles.rtlText]
+                            : [styles.companyText]
+                        }
+                      >
+                        {visitor.company}
+                      </Text>
+                    ) : null}
+                  </View>
                 </View>
               </View>
             );
@@ -303,6 +317,7 @@ function GuestBadgesDocument({
         <Page key={pageIndex} size="LETTER" style={styles.page}>
           {pageVisitors.map((visitor, visitorIndex) => (
             <View key={visitor.id} style={styles.badge} wrap={false}>
+              <View style={styles.badgeContent}>
               <BadgeLogos logoSource={logoSource} />
                 {visitor.shortCode ? (
                   <Text style={styles.shortCodeText}>{visitor.shortCode}</Text>
@@ -313,6 +328,7 @@ function GuestBadgesDocument({
                 <Text style={[styles.guestText, styles.guestLabel, styles.rtlText]}>
                   {formatGuestBadgeLabel()}
                 </Text>
+              </View>
               </View>
             </View>
           ))}
