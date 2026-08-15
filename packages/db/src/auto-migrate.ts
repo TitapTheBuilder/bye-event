@@ -72,6 +72,14 @@ export async function ensureSchema(): Promise<void> {
     `ALTER TABLE exhibitors ADD COLUMN IF NOT EXISTS last_name varchar(200);`,
     `ALTER TABLE exhibitors ADD COLUMN IF NOT EXISTS session_version integer DEFAULT 0 NOT NULL;`,
 
+    `DO $$ BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'exhibitors' AND column_name = 'name') THEN
+        UPDATE exhibitors SET first_name = COALESCE(NULLIF(BTRIM(name), ''), 'Exhibitor'), last_name = COALESCE(last_name, '') WHERE first_name IS NULL;
+        ALTER TABLE exhibitors ALTER COLUMN name DROP NOT NULL;
+        ALTER TABLE exhibitors DROP COLUMN IF EXISTS name;
+      END IF;
+    END $$;`,
+
     `CREATE TABLE IF NOT EXISTS visitors (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
       qr_token varchar(64) UNIQUE NOT NULL,
@@ -89,6 +97,14 @@ export async function ensureSchema(): Promise<void> {
     `ALTER TABLE visitors ADD COLUMN IF NOT EXISTS first_name varchar(200);`,
     `ALTER TABLE visitors ADD COLUMN IF NOT EXISTS last_name varchar(200);`,
     `ALTER TABLE visitors ADD COLUMN IF NOT EXISTS short_code varchar(10) NOT NULL DEFAULT substring(md5(random()::text), 1, 6);`,
+
+    `DO $$ BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'visitors' AND column_name = 'name') THEN
+        UPDATE visitors SET first_name = COALESCE(NULLIF(BTRIM(name), ''), first_name) WHERE first_name IS NULL;
+        ALTER TABLE visitors ALTER COLUMN name DROP NOT NULL;
+        ALTER TABLE visitors DROP COLUMN IF EXISTS name;
+      END IF;
+    END $$;`,
 
     `DO $$ BEGIN
       ALTER TABLE visitors ADD CONSTRAINT visitors_short_code_unique UNIQUE (short_code);
