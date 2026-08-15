@@ -89,6 +89,7 @@ export async function ensureSchema(): Promise<void> {
       company varchar(200),
       phone_number varchar(30),
       email varchar(200),
+      color varchar(50),
       visitor_type visitor_type DEFAULT 'invited' NOT NULL,
       deactivated_at timestamp with time zone,
       created_at timestamp with time zone DEFAULT now() NOT NULL
@@ -97,6 +98,7 @@ export async function ensureSchema(): Promise<void> {
     `ALTER TABLE visitors ADD COLUMN IF NOT EXISTS first_name varchar(200);`,
     `ALTER TABLE visitors ADD COLUMN IF NOT EXISTS last_name varchar(200);`,
     `ALTER TABLE visitors ADD COLUMN IF NOT EXISTS short_code varchar(10) NOT NULL DEFAULT substring(md5(random()::text), 1, 6);`,
+    `ALTER TABLE visitors ADD COLUMN IF NOT EXISTS color varchar(50);`,
 
     `DO $$ BEGIN
       IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'visitors' AND column_name = 'name') THEN
