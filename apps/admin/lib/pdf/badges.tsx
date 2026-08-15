@@ -340,23 +340,35 @@ function GuestBadgesDocument({
       {pages.map((pageVisitors, pageIndex) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: pages are a static, non-reorderable chunking of the input list
         <Page key={pageIndex} size="LETTER" style={styles.page}>
-          {pageVisitors.map((visitor, visitorIndex) => (
-            <View key={visitor.id} style={styles.badge} wrap={false}>
-              <View style={styles.badgeContent}>
-              <BadgeLogos logoSource={logoSource} />
-                {visitor.shortCode ? (
-                  <Text style={styles.shortCodeText}>{visitor.shortCode}</Text>
-                ) : null}
-              <Image src={qrDataUrls.get(visitor.qrToken)} style={styles.qr} />
+          {pageVisitors.map((visitor, visitorIndex) => {
+            const isLastCol = (visitorIndex + 1) % BADGES_PER_ROW === 0;
+            const isLastRow = visitorIndex >= pageVisitors.length - BADGES_PER_ROW;
+            return (
+              <View
+                key={visitor.id}
+                style={[
+                  styles.badge,
+                  ...(isLastCol ? [styles.noRightGap] : []),
+                  ...(isLastRow ? [styles.noBottomGap] : []),
+                ]}
+                wrap={false}
+              >
+                <View style={styles.badgeContent}>
+                  <BadgeLogos logoSource={logoSource} />
+                  {visitor.shortCode ? (
+                    <Text style={styles.shortCodeText}>{visitor.shortCode}</Text>
+                  ) : null}
+                  <Image src={qrDataUrls.get(visitor.qrToken)} style={styles.qr} />
 
-              <View style={styles.textColumn}>
-                <Text style={[styles.guestText, styles.guestLabel, styles.rtlText]}>
-                  {formatGuestBadgeLabel()}
-                </Text>
+                  <View style={styles.textColumn}>
+                    <Text style={[styles.guestText, styles.guestLabel, styles.rtlText]}>
+                      {formatGuestBadgeLabel()}
+                    </Text>
+                  </View>
+                </View>
               </View>
-              </View>
-            </View>
-          ))}
+            );
+          })}
         </Page>
       ))}
     </Document>
