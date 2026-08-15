@@ -1,0 +1,18 @@
+diff --git a/lib/textkit.js b/lib/textkit.js
+index 0b8b6fa636c48ef0ac9cecb27040d2bac9303ce8..823e9619d9077830a654ecccdeef72df85783e15 100644
+--- a/lib/textkit.js
++++ b/lib/textkit.js
+@@ -1030,10 +1030,11 @@ const reorderLine = (line) => {
+         for (let i = 0; i < selectedIndices.length; i += 1) {
+             const index = selectedIndices[i];
+             const glyph = getItemAtIndex(line.runs, 'glyphs', index);
+-            if (addedGlyphs.has(glyph.id))
++            if (!glyph || addedGlyphs.has(glyph.id))
+                 continue;
++            const position = getItemAtIndex(line.runs, 'positions', index);
+             updatedGlyphs.push(glyph);
+-            updatedPositions.push(getItemAtIndex(line.runs, 'positions', index));
++            if (position) updatedPositions.push(position);
+             if (glyph.isLigature) {
+                 addedGlyphs.add(glyph.id);
+             }

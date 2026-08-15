@@ -49,17 +49,25 @@ export async function GET(request: Request) {
     });
   }
 
-  const exhibitorName = exhibitor
-    ? formatPersonName(exhibitor.firstName, exhibitor.lastName)
-    : "Exhibitor";
-  const pdf = await generateScannedVisitorsPdf(rows, exhibitorName);
-  return new NextResponse(new Uint8Array(pdf), {
-    headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${filename}"`,
-      "Cache-Control": "private, no-store",
-    },
-  });
+  try {
+    const exhibitorName = exhibitor
+      ? formatPersonName(exhibitor.firstName, exhibitor.lastName)
+      : "Exhibitor";
+    const pdf = await generateScannedVisitorsPdf(rows, exhibitorName);
+    return new NextResponse(new Uint8Array(pdf), {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="${filename}"`,
+        "Cache-Control": "private, no-store",
+      },
+    });
+  } catch (err) {
+    console.error("PDF export GET failed:", err);
+    return NextResponse.json(
+      { error: "Failed to generate PDF", details: err instanceof Error ? err.message : String(err) },
+      { status: 500 },
+    );
+  }
 }
 
 export async function POST(request: Request) {
@@ -115,12 +123,20 @@ export async function POST(request: Request) {
   }
   if (!exhibitorName) exhibitorName = "Exhibitor";
 
-  const pdf = await generateScannedVisitorsPdf(items, exhibitorName);
-  return new NextResponse(new Uint8Array(pdf), {
-    headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${filename}"`,
-      "Cache-Control": "private, no-store",
-    },
-  });
+  try {
+    const pdf = await generateScannedVisitorsPdf(items, exhibitorName);
+    return new NextResponse(new Uint8Array(pdf), {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="${filename}"`,
+        "Cache-Control": "private, no-store",
+      },
+    });
+  } catch (err) {
+    console.error("PDF export POST failed:", err);
+    return NextResponse.json(
+      { error: "Failed to generate PDF", details: err instanceof Error ? err.message : String(err) },
+      { status: 500 },
+    );
+  }
 }
