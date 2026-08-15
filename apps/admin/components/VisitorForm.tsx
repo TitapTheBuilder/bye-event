@@ -15,6 +15,7 @@ export interface VisitorFormValues {
   company: string;
   phoneNumber: string;
   email: string;
+  color: string;
   visitorType: "invited" | "guest";
 }
 
@@ -24,6 +25,7 @@ const EMPTY_VALUES: VisitorFormValues = {
   company: "",
   phoneNumber: "",
   email: "",
+  color: "",
   visitorType: "invited",
 };
 
@@ -103,6 +105,14 @@ export function VisitorForm({
           />
         </FormField>
       </div>
+      <FormField label={t("form.color")}>
+        <input
+          className={inputClassName}
+          value={values.color}
+          onChange={(e) => setValues((v) => ({ ...v, color: e.target.value }))}
+          placeholder="yellow"
+        />
+      </FormField>
       {showVisitorType ? (
         <FormField label={t("form.visitorType")}>
           <select

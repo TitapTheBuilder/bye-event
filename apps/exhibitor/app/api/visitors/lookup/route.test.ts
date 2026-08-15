@@ -55,6 +55,7 @@ describe("POST /api/visitors/lookup", () => {
       company: "Company",
       phoneNumber: "123",
       email: "test@example.com",
+      color: null,
       visitorType: "invited",
       createdAt: new Date(),
       deactivatedAt: null,

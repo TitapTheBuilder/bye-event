@@ -1,0 +1,1 @@
+ALTER TABLE "visitors" ADD COLUMN "color" varchar(50);

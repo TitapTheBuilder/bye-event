@@ -30,6 +30,24 @@ describe("parseVisitorImportFile", () => {
     });
   });
 
+  it("parses the canonical color-first CSV format (color, first name, company, last name)", () => {
+    const csv = "color,first name,company,last name\nblue,Ali,Tehran Labs,Ahmadi\nyellow,Sara,FaraData,\n";
+    const result = parseVisitorImportFile(csvBuffer(csv), "visitors.csv");
+
+    expect(result.validCount).toBe(2);
+    expect(result.rows[0]?.data).toMatchObject({
+      color: "blue",
+      firstName: "Ali",
+      company: "Tehran Labs",
+      lastName: "Ahmadi",
+    });
+    expect(result.rows[1]?.data).toMatchObject({
+      color: "yellow",
+      firstName: "Sara",
+      company: "FaraData",
+    });
+  });
+
   it("does a partial-success import: valid rows succeed even when others are invalid", () => {
     const csv = [
       "first name,last name,company,email",

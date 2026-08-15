@@ -25,6 +25,7 @@ export const visitorCreateSchema = z.object({
     .optional()
     .or(z.literal(""))
     .transform((v) => (v ? v : undefined)),
+  color: optionalTrimmedString(50),
   visitorType: visitorTypeSchema.default("invited"),
 });
 export type VisitorCreateInput = z.infer<typeof visitorCreateSchema>;
@@ -50,6 +51,7 @@ export const visitorImportRowSchema = z.object({
     .refine((v) => v === undefined || z.string().email().safeParse(v).success, {
       message: "Invalid email address",
     }),
+  color: optionalTrimmedString(50),
 });
 export type VisitorImportRow = z.infer<typeof visitorImportRowSchema>;
 

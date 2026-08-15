@@ -25,6 +25,7 @@ function toFormValues(visitor?: Visitor): Partial<VisitorFormValues> | undefined
     company: visitor.company ?? "",
     phoneNumber: visitor.phoneNumber ?? "",
     email: visitor.email ?? "",
+    color: visitor.color ?? "",
     visitorType: visitor.visitorType,
   };
 }
@@ -200,6 +201,7 @@ export default function VisitorsPage() {
                 {sortIndicator("company")}
               </th>
               <th className="px-4 py-3">{t("visitors.contact")}</th>
+              <th className="px-4 py-3">{t("visitors.color")}</th>
               <th className="px-4 py-3">{t("visitors.type")}</th>
               <th className="px-4 py-3">{t("visitors.status")}</th>
               <th
@@ -217,13 +219,13 @@ export default function VisitorsPage() {
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-text-secondary">
+                <td colSpan={10} className="px-4 py-8 text-center text-text-secondary">
                   {t("common.loading")}
                 </td>
               </tr>
             ) : visitors.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-text-secondary">
+                <td colSpan={10} className="px-4 py-8 text-center text-text-secondary">
                   {t("visitors.noVisitors")}
                 </td>
               </tr>
@@ -238,6 +240,7 @@ export default function VisitorsPage() {
                     <div>{visitor.phoneNumber ?? "—"}</div>
                     <div className="text-xs text-text-muted">{visitor.email ?? ""}</div>
                   </td>
+                  <td className="px-4 py-3 text-text-secondary">{visitor.color ?? "—"}</td>
                   <td className="px-4 py-3">
                     <VisitorTypeBadge visitorType={visitor.visitorType} />
                   </td>

@@ -15,6 +15,7 @@ interface ImportRowResult {
     company?: string;
     phoneNumber?: string;
     email?: string;
+    color?: string;
   };
   errors?: string[];
 }
@@ -157,6 +158,7 @@ export default function ImportVisitorsPage() {
               <thead className="sticky top-0 border-b border-border-subtle bg-surface-1 text-text-secondary">
                 <tr>
                   <th className="px-4 py-3">{t("import.row")}</th>
+                  <th className="px-4 py-3">{t("import.color")}</th>
                   <th className="px-4 py-3">{t("import.firstName")}</th>
                   <th className="px-4 py-3">{t("import.lastName")}</th>
                   <th className="px-4 py-3">{t("import.company")}</th>
@@ -174,6 +176,7 @@ export default function ImportVisitorsPage() {
                     }`}
                   >
                     <td className="px-4 py-2 text-text-muted">{row.rowNumber}</td>
+                    <td className="px-4 py-2 text-text-secondary">{row.data?.color ?? "—"}</td>
                     <td className="px-4 py-2 text-text-primary">{row.data?.firstName ?? "—"}</td>
                     <td className="px-4 py-2 text-text-primary">{row.data?.lastName ?? "—"}</td>
                     <td className="px-4 py-2 text-text-secondary">{row.data?.company ?? "—"}</td>

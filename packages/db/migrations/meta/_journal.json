@@ -50,6 +50,13 @@
       "when": 1786451888784,
       "tag": "0006_tidy_kingpin",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1786807902843,
+      "tag": "0007_thin_korvac",
+      "breakpoints": true
     }
   ]
 }

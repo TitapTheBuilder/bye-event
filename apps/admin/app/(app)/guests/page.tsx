@@ -18,6 +18,7 @@ function toFormValues(visitor: Visitor): Partial<VisitorFormValues> {
     company: visitor.company ?? "",
     phoneNumber: visitor.phoneNumber ?? "",
     email: visitor.email ?? "",
+    color: visitor.color ?? "",
     visitorType: visitor.visitorType,
   };
 }
@@ -146,6 +147,7 @@ export default function GuestsPage() {
               <th className="px-4 py-3">{t("visitors.lastName")}</th>
               <th className="px-4 py-3">{t("visitors.company")}</th>
               <th className="px-4 py-3">{t("visitors.contact")}</th>
+              <th className="px-4 py-3">{t("visitors.color")}</th>
               <th className="px-4 py-3">{t("visitors.status")}</th>
               <th className="px-4 py-3">{t("visitors.created")}</th>
               <th className={`px-4 py-3 text-${dir === "rtl" ? "start" : "end"}`}>
@@ -156,13 +158,13 @@ export default function GuestsPage() {
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-text-secondary">
+                <td colSpan={9} className="px-4 py-8 text-center text-text-secondary">
                   {t("common.loading")}
                 </td>
               </tr>
             ) : visitors.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-text-secondary">
+                <td colSpan={9} className="px-4 py-8 text-center text-text-secondary">
                   {t("guests.noGuests")}
                 </td>
               </tr>
@@ -179,6 +181,7 @@ export default function GuestsPage() {
                     <div>{visitor.phoneNumber ?? "—"}</div>
                     <div className="text-xs text-text-muted">{visitor.email ?? ""}</div>
                   </td>
+                  <td className="px-4 py-3 text-text-secondary">{visitor.color ?? "—"}</td>
                   <td className="px-4 py-3">
                     <StatusPill active={!visitor.deactivatedAt} />
                   </td>

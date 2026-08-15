@@ -9,6 +9,7 @@ export interface CreateVisitorInput {
   company?: string | null;
   phoneNumber?: string | null;
   email?: string | null;
+  color?: string | null;
   visitorType?: "invited" | "guest";
 }
 
@@ -74,6 +75,7 @@ export async function createVisitorsBulk(
       company: input.company?.trim() || null,
       phoneNumber: input.phoneNumber?.trim() || null,
       email: input.email?.trim() || null,
+      color: input.color?.trim() || null,
       visitorType: input.visitorType ?? "invited",
       qrToken: generateQrToken(),
       shortCode: shortCodes[index] as string,
@@ -142,6 +144,7 @@ export interface UpdateVisitorInput {
   company?: string | null;
   phoneNumber?: string | null;
   email?: string | null;
+  color?: string | null;
   visitorType?: "invited" | "guest";
 }
 
@@ -161,6 +164,7 @@ export async function updateVisitor(
       company: normalize(input.company),
       phoneNumber: normalize(input.phoneNumber),
       email: normalize(input.email),
+      color: normalize(input.color),
     })
     .where(eq(visitors.id, id))
     .returning();

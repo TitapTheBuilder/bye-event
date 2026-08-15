@@ -53,6 +53,7 @@ export const visitors = pgTable(
     company: varchar("company", { length: 200 }),
     phoneNumber: varchar("phone_number", { length: 30 }),
     email: varchar("email", { length: 200 }),
+    color: varchar("color", { length: 50 }),
     visitorType: visitorTypeEnum("visitor_type").notNull().default("invited"),
     deactivatedAt: timestamp("deactivated_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

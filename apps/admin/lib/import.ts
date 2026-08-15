@@ -127,6 +127,8 @@ const HEADER_ALIASES: Record<string, keyof VisitorImportRow> = {
   email: "email",
   "e-mail": "email",
   "email address": "email",
+  color: "color",
+  colour: "color",
 };
 
 function normalizeKey(key: string): string {

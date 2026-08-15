@@ -43,6 +43,7 @@ function visitorsToRows(visitors: Visitor[]): ExportRow[] {
     company: v.company,
     phoneNumber: v.phoneNumber,
     email: v.email,
+    color: v.color,
     visitorType: v.visitorType,
     deactivatedAt: isoOrNull(v.deactivatedAt),
     createdAt: isoOrNull(v.createdAt),
