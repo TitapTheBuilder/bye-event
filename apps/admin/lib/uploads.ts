@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { MAX_LOGO_UPLOAD_BYTES } from "@repo/shared/schemas";
 import sharp from "sharp";
@@ -111,7 +113,19 @@ export function getUploadsDir(): string {
   // dev-local scratch directory, never part of the app's source tree, so
   // Next's build-time file tracer must not attempt to resolve or bundle
   // whatever it happens to point to.
-  return process.env.UPLOADS_DIR ?? path.join(process.cwd(), "../../.uploads");
+  if (process.env.UPLOADS_DIR) {
+    return process.env.UPLOADS_DIR;
+  }
+  if (existsSync("/app/uploads")) {
+    return "/app/uploads";
+  }
+  if (existsSync(path.join(process.cwd(), "pnpm-workspace.yaml"))) {
+    return path.join(process.cwd(), ".uploads");
+  }
+  if (existsSync(path.join(process.cwd(), "../../pnpm-workspace.yaml"))) {
+    return path.join(process.cwd(), "../../.uploads");
+  }
+  return path.join(process.cwd(), ".uploads");
 }
 
 export interface SavedUpload {
@@ -128,12 +142,24 @@ export interface SavedUpload {
 
 export async function saveLogoUpload(buffer: Buffer, contentType: string): Promise<SavedUpload> {
   const data = await canonicalizeLogoUpload(buffer, contentType);
-  const dir = path.join(/* turbopackIgnore: true */ getUploadsDir(), "logos");
-  await mkdir(dir, { recursive: true });
-
+  const uploadsDir = getUploadsDir();
+  const dir = path.join(/* turbopackIgnore: true */ uploadsDir, "logos");
   const filename = `${randomUUID()}.png`;
-  const filePath = path.join(/* turbopackIgnore: true */ dir, filename);
-  await writeFile(filePath, data);
+  let filePath = path.join(/* turbopackIgnore: true */ dir, filename);
+
+  try {
+    await mkdir(dir, { recursive: true });
+    await writeFile(filePath, data);
+  } catch (err) {
+    // If the configured uploads directory has permission issues (e.g. read-only
+    // container filesystem or missing volume permissions), gracefully fall back
+    // to OS tmpdir for local file path consumers (node-vibrant, badge rendering).
+    // The database remains the true permanent system of record.
+    const fallbackDir = path.join(tmpdir(), "uploads", "logos");
+    await mkdir(fallbackDir, { recursive: true });
+    filePath = path.join(fallbackDir, filename);
+    await writeFile(filePath, data);
+  }
 
   // Deliberately origin-RELATIVE, so each app resolves it against whatever
   // host the browser is actually on. Baking in an absolute origin here

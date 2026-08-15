@@ -51,7 +51,7 @@ export async function POST(request: Request) {
   // database -- so that is what its /uploads route serves the logo from.
   await putUpload(db, storagePath, contentType, data);
 
-  const extracted = await extractBrandColors(filePath);
+  const extracted = await extractBrandColors(data);
 
   const settings = await upsertEventSettings(db, {
     logoUrl: url,

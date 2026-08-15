@@ -19,9 +19,9 @@ function isHex(value: string | undefined | null): value is string {
  * logo, which node-vibrant/Jimp can't rasterize) so callers can fall back
  * to the existing/default palette rather than erroring the whole upload.
  */
-export async function extractBrandColors(filePath: string): Promise<ExtractedBrandColors | null> {
+export async function extractBrandColors(input: string | Buffer): Promise<ExtractedBrandColors | null> {
   try {
-    const palette = await Vibrant.from(filePath).getPalette();
+    const palette = await Vibrant.from(input).getPalette();
     const primary = palette.Vibrant?.hex ?? palette.Muted?.hex;
     const secondary = palette.DarkVibrant?.hex ?? palette.DarkMuted?.hex ?? primary;
     const accent = palette.LightVibrant?.hex ?? palette.LightMuted?.hex ?? primary;

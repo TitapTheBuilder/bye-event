@@ -25,10 +25,12 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
+ENV UPLOADS_DIR=/app/uploads
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 COPY --from=installer --chown=nextjs:nodejs /app/apps/exhibitor/.next/standalone ./
 COPY --from=installer --chown=nextjs:nodejs /app/apps/exhibitor/.next/static ./apps/exhibitor/.next/static
 COPY --from=installer --chown=nextjs:nodejs /app/apps/exhibitor/public ./apps/exhibitor/public
+RUN mkdir -p /app/uploads && chown -R nextjs:nodejs /app/uploads
 USER nextjs
 EXPOSE 3000
 CMD ["node", "apps/exhibitor/server.js"]

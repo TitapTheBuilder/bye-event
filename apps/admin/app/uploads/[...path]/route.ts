@@ -37,7 +37,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ pat
   if (stored) {
     return new NextResponse(new Uint8Array(stored.data), {
       headers: {
-        "Content-Type": contentType,
+        "Content-Type": stored.contentType || contentType,
         "Cache-Control": "public, max-age=31536000, immutable",
         "X-Content-Type-Options": "nosniff",
         "Cross-Origin-Resource-Policy": "same-origin",

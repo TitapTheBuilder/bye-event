@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { db, getUpload } from "@repo/db";
 import { NextResponse } from "next/server";
@@ -11,6 +13,21 @@ const CONTENT_TYPE_BY_EXTENSION: Record<string, string> = {
 
 const SAFE_SEGMENT = /^[a-zA-Z0-9._-]+$/;
 
+function getUploadsDir(): string {
+  if (process.env.UPLOADS_DIR) {
+    return process.env.UPLOADS_DIR;
+  }
+  if (existsSync("/app/uploads")) {
+    return "/app/uploads";
+  }
+  if (existsSync(path.join(process.cwd(), "pnpm-workspace.yaml"))) {
+    return path.join(process.cwd(), ".uploads");
+  }
+  if (existsSync(path.join(process.cwd(), "../../pnpm-workspace.yaml"))) {
+    return path.join(process.cwd(), "../../.uploads");
+  }
+  return path.join(process.cwd(), ".uploads");
+}
 
 /**
  * Serves admin-uploaded assets (the business-customer logo) so this app
@@ -20,7 +37,9 @@ const SAFE_SEGMENT = /^[a-zA-Z0-9._-]+$/;
  * Reads from the `uploads` table, because the admin app runs as a separate
  * container and its local disk is NOT reachable from here in a normal
  * deployment -- only docker-compose happens to mount a shared volume.
-
+ * The UPLOADS_DIR read is kept as a fallback for assets uploaded before
+ * database storage existed, and for the shared-volume/dev setup.
+ *
  * Mirrors apps/admin/app/uploads/[...path]/route.ts — intentionally
  * unauthenticated (logo is public) and path-traversal-safe (only flat
  * alphanumeric segments are accepted).
@@ -41,14 +60,36 @@ export async function GET(_request: Request, { params }: { params: Promise<{ pat
   }
 
   const stored = await getUpload(db, segments.join("/"));
-  if (!stored) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (stored) {
+    return new NextResponse(new Uint8Array(stored.data), {
+      headers: {
+        "Content-Type": stored.contentType || contentType,
+        "Cache-Control": "public, max-age=31536000, immutable",
+        "X-Content-Type-Options": "nosniff",
+        "Cross-Origin-Resource-Policy": "same-origin",
+      },
+    });
+  }
 
-  return new NextResponse(new Uint8Array(stored.data), {
-    headers: {
-      "Content-Type": contentType,
-      "Cache-Control": "public, max-age=31536000, immutable",
-      "X-Content-Type-Options": "nosniff",
-      "Cross-Origin-Resource-Policy": "same-origin",
-    },
-  });
+  const uploadsDir = path.resolve(getUploadsDir());
+  const resolved = path.resolve(uploadsDir, ...segments);
+
+  // Belt-and-suspenders: never serve anything outside the uploads dir.
+  if (!resolved.startsWith(`${uploadsDir}${path.sep}`) && resolved !== uploadsDir) {
+    return NextResponse.json({ error: "Invalid path" }, { status: 400 });
+  }
+
+  try {
+    const data = await readFile(resolved);
+    return new NextResponse(new Uint8Array(data), {
+      headers: {
+        "Content-Type": contentType,
+        "Cache-Control": "public, max-age=31536000, immutable",
+        "X-Content-Type-Options": "nosniff",
+        "Cross-Origin-Resource-Policy": "same-origin",
+      },
+    });
+  } catch {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
 }
