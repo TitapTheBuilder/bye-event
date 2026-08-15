@@ -1,30 +1,12 @@
-import { consumeRateLimit, createExhibitor, db, getExhibitorByUsername } from "@repo/db";
+import { createExhibitor, db, getExhibitorByUsername } from "@repo/db";
 import { hashPassword } from "@repo/shared/auth/password";
-import { EXHIBITOR_SIGNUP_RATE_LIMIT } from "@repo/shared/constants";
 import { exhibitorSignupSchema } from "@repo/shared/schemas";
 import { NextResponse } from "next/server";
-import { forbiddenOrigin, getClientIp, isSameOriginRequest } from "@/lib/http";
+import { forbiddenOrigin, isSameOriginRequest } from "@/lib/http";
 import { createExhibitorSession } from "@/lib/session";
 
 export async function POST(request: Request) {
   if (!isSameOriginRequest(request)) return forbiddenOrigin();
-
-  const rateLimit = await consumeRateLimit(
-    db,
-    `auth:exhibitor-signup:${getClientIp(request)}`,
-    EXHIBITOR_SIGNUP_RATE_LIMIT,
-  );
-  if (!rateLimit.allowed) {
-    return NextResponse.json(
-      { error: "Too many signup attempts, please try again later" },
-      {
-        status: 429,
-        headers: {
-          "Retry-After": Math.max(1, Math.ceil((rateLimit.resetAt - Date.now()) / 1000)).toString(),
-        },
-      },
-    );
-  }
 
   const body = await request.json().catch(() => null);
   const parsed = exhibitorSignupSchema.safeParse(body);
@@ -38,25 +20,6 @@ export async function POST(request: Request) {
   }
 
   const { firstName, lastName, username, phoneNumber, password } = parsed.data;
-  const accountRateLimit = await consumeRateLimit(
-    db,
-    `auth:exhibitor-signup-account:${username.toLowerCase()}`,
-    EXHIBITOR_SIGNUP_RATE_LIMIT,
-  );
-  if (!accountRateLimit.allowed) {
-    return NextResponse.json(
-      { error: "Too many signup attempts, please try again later" },
-      {
-        status: 429,
-        headers: {
-          "Retry-After": Math.max(
-            1,
-            Math.ceil((accountRateLimit.resetAt - Date.now()) / 1000),
-          ).toString(),
-        },
-      },
-    );
-  }
 
   const existing = await getExhibitorByUsername(db, username);
   if (existing) {
@@ -74,11 +37,28 @@ export async function POST(request: Request) {
       phoneNumber,
       passwordHash,
     });
-  } catch {
-    // Most likely the phone_number unique constraint.
+  } catch (err: unknown) {
+    const dbErr = err as { code?: string; constraint?: string; message?: string; detail?: string };
+    console.error("Exhibitor signup database error:", err);
+
+    // Postgres unique_violation error code is 23505
+    if (dbErr?.code === "23505" || dbErr?.message?.includes("unique") || dbErr?.detail?.includes("already exists")) {
+      const target = `${dbErr?.constraint ?? ""} ${dbErr?.detail ?? ""} ${dbErr?.message ?? ""}`.toLowerCase();
+      if (target.includes("phone")) {
+        return NextResponse.json({ error: "Phone number is already in use" }, { status: 409 });
+      }
+      if (target.includes("username")) {
+        return NextResponse.json({ error: "Username is already taken" }, { status: 409 });
+      }
+      return NextResponse.json(
+        { error: "Username or phone number is already in use" },
+        { status: 409 },
+      );
+    }
+
     return NextResponse.json(
-      { error: "Username or phone number is already in use" },
-      { status: 409 },
+      { error: "Registration failed due to a server error. Please try again later." },
+      { status: 500 },
     );
   }
 

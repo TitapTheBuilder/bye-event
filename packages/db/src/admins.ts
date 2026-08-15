@@ -9,8 +9,17 @@ export interface CreateAdminInput {
   passwordHash: string;
 }
 
-export async function createAdmin(db: Database, input: CreateAdminInput): Promise<Admin> {
-  const [row] = await db.insert(admins).values(input).returning();
+export async function createAdmin(
+  db: Database,
+  input: CreateAdminInput & { id?: string },
+): Promise<Admin> {
+  const [row] = await db
+    .insert(admins)
+    .values({
+      id: input.id ?? crypto.randomUUID(),
+      ...input,
+    })
+    .returning();
   if (!row) throw new Error("Failed to create admin");
   return row;
 }

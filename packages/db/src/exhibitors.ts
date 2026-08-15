@@ -13,11 +13,16 @@ export interface CreateExhibitorInput {
 
 export async function createExhibitor(
   db: Database,
-  input: CreateExhibitorInput,
+  input: CreateExhibitorInput & { id?: string },
 ): Promise<Exhibitor> {
   const [row] = await db
     .insert(exhibitors)
-    .values({ ...input, firstName: input.firstName.trim(), lastName: input.lastName.trim() })
+    .values({
+      id: input.id ?? crypto.randomUUID(),
+      ...input,
+      firstName: input.firstName.trim(),
+      lastName: input.lastName.trim(),
+    })
     .returning();
   if (!row) throw new Error("Failed to create exhibitor");
   return row;
