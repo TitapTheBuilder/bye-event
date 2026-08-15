@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
     borderColor: "#999999",
     position: "relative", // <-- CRITICAL: Turns the badge into a fixed canvas, bypassing flexbox bugs
   },
-qr: {
+  qr: {
     position: "absolute",
     left: 14,
     top: 39, 
@@ -136,7 +136,7 @@ qr: {
   companyText: {
     fontSize: 9,
     fontWeight: 400,
-    color: "#555555",
+    color: "#1c1c1c",
     marginTop: 6,
     textAlign: "right",
   },
@@ -235,8 +235,6 @@ function InvitedBadgesDocument({
         // biome-ignore lint/suspicious/noArrayIndexKey: pages are a static, non-reorderable chunking of the input list
         <Page key={pageIndex} size="LETTER" style={styles.page}>
         {pageVisitors.map((visitor) => {
-            const fullName = [visitor.firstName, visitor.lastName].filter(Boolean).join(" ");
-
             return (
               <View key={visitor.id} style={styles.badge} wrap={false}>
                 <BadgeLogos logoSource={logoSource} />
@@ -246,15 +244,27 @@ function InvitedBadgesDocument({
                 <Image src={qrDataUrls.get(visitor.qrToken)} style={styles.qr} />
 
                 <View style={styles.textColumn}>
-                  {fullName ? (
+                  {visitor.firstName ? (
                     <Text
                       style={
-                        containsArabicScript(fullName)
+                        containsArabicScript(visitor.firstName)
                           ? [styles.prominentText, styles.rtlText]
                           : [styles.prominentText]
                       }
                     >
-                      {fullName}
+                      {visitor.firstName}
+                    </Text>
+                  ) : null}
+
+                  {visitor.lastName ? (
+                    <Text
+                      style={
+                        containsArabicScript(visitor.lastName)
+                          ? [styles.prominentText, styles.rtlText]
+                          : [styles.prominentText]
+                      }
+                    >
+                      {visitor.lastName}
                     </Text>
                   ) : null}
                   
