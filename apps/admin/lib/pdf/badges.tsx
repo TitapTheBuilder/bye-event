@@ -127,73 +127,17 @@ const styles = StyleSheet.create({
   },
   badgeContent: {
     position: "absolute",
-    left: (BADGE_WIDTH - CARD_WIDTH) / 2,
-    top: (BADGE_HEIGHT - CARD_HEIGHT) / 2,
-    width: CARD_WIDTH,
-    height: CARD_HEIGHT,
-    transform: `rotate(90deg) scale(${BADGE_SCALE})`,
-    transformOrigin: "center",
-  },
-  qr: {
-    position: "absolute",
-    left: 14,
-    top: 39, 
-    width: 84,
-    height: 84,
-  },
-  shortCodeText: {
-    position: "absolute",
-    left: 14,
-    width: 84,
-    top: 15,
-    textAlign: "center",
-    fontSize: 11,
-    color: "#555555",
-    letterSpacing: 2,
-  },
-  textColumn: {
-    position: "absolute",
-    right: 14, // Locks the column perfectly 14 pixels from the right border
-    top: 54, // Starts nicely below the logos
-    width: 125, // Hard brick wall: The text can NEVER exceed this width now
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    padding: 20,
     flexDirection: "column",
-  },
-  companyText: {
-    fontSize: 9,
-    fontWeight: 400,
-    color: "#1c1c1c",
-    marginTop: 6,
-    textAlign: "right",
-  },
-  prominentText: {
-    fontSize: 12,
-    fontWeight: 700,
-    color: "#111111",
-    textAlign: "right",
-  },
-  guestText: {
-    fontSize: 22,
-    fontWeight: 700,
-    color: "#111111",
-    textAlign: "right",   
-  },
-  guestBadge: {
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingTop: 34,
-  },
-  rtlText: {
-    direction: "rtl",
-    textAlign: "right",
   },
   logoStrip: {
-    position: "absolute",
-    top: 14,
-    right: 14,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 8,
   },
   brandingLogo: {
@@ -206,14 +150,59 @@ const styles = StyleSheet.create({
     height: 28,
     objectFit: "contain",
   },
-  qrLarge: {
-    width: 92,
-    height: 92,
+  identityBlock: {
+    marginTop: 24,
+    alignSelf: "center",
+    width: "85%",
+    flexDirection: "column",
   },
-  guestLabel: {
+  centerRow: {
+    width: "100%",
+    alignItems: "center",
+  },
+  companyText: {
+    fontSize: 12,
+    fontWeight: 400,
+    color: "#1c1c1c",
+    marginTop: 10,
+    textAlign: "center",
+  },
+  prominentText: {
+    fontSize: 18,
+    fontWeight: 700,
+    color: "#111111",
+    textAlign: "center",
+  },
+  guestText: {
+    fontSize: 32,
+    fontWeight: 700,
+    color: "#111111",
+    textAlign: "center",
+  },
+  rtlText: {
     direction: "rtl",
     textAlign: "right",
-    marginBottom: 16,
+  },
+  rtlCenterText: {
+    direction: "rtl",
+    textAlign: "center",
+  },
+  spacer: {
+    flexGrow: 1,
+  },
+  shortCodeText: {
+    alignSelf: "center",
+    textAlign: "center",
+    fontSize: 16,
+    color: "#555555",
+    letterSpacing: 3,
+    marginBottom: 10,
+  },
+  qr: {
+    alignSelf: "center",
+    width: "50%",
+    aspectRatio: 1,
+    marginBottom: 6,
   },
   noRightGap: { marginRight: 0 },
   noBottomGap: { marginBottom: 0 },
@@ -261,9 +250,10 @@ function InvitedBadgesDocument({
       {pages.map((pageVisitors, pageIndex) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: pages are a static, non-reorderable chunking of the input list
         <Page key={pageIndex} size="LETTER" style={styles.page}>
-        {pageVisitors.map((visitor, i) => {
+          {pageVisitors.map((visitor, i) => {
             const isLastCol = (i + 1) % BADGES_PER_ROW === 0;
             const isLastRow = i >= pageVisitors.length - BADGES_PER_ROW;
+            const fullName = [visitor.firstName, visitor.lastName].filter(Boolean).join(" ");
             return (
               <View
                 key={visitor.id}
@@ -276,48 +266,43 @@ function InvitedBadgesDocument({
               >
                 <View style={styles.badgeContent}>
                   <BadgeLogos logoSource={logoSource} />
-                  {visitor.shortCode ? (
-                    <Text style={styles.shortCodeText}>{visitor.shortCode}</Text>
-                  ) : null}
-                  <Image src={qrDataUrls.get(visitor.qrToken)} style={styles.qr} />
 
-                  <View style={styles.textColumn}>
-                    {visitor.firstName ? (
+                  <View style={styles.identityBlock}>
+                    {fullName ? (
+                    <View style={styles.centerRow}>
                       <Text
                         style={
-                          containsArabicScript(visitor.firstName)
-                            ? [styles.prominentText, styles.rtlText]
+                          containsArabicScript(fullName)
+                            ? [styles.prominentText, styles.rtlCenterText]
                             : [styles.prominentText]
                         }
                       >
-                        {visitor.firstName}
+                        {fullName}
                       </Text>
+                    </View>
                     ) : null}
 
-                    {visitor.lastName ? (
-                      <Text
-                        style={
-                          containsArabicScript(visitor.lastName)
-                            ? [styles.prominentText, styles.rtlText]
-                            : [styles.prominentText]
-                        }
-                      >
-                        {visitor.lastName}
-                      </Text>
-                    ) : null}
-                    
                     {visitor.company ? (
+                    <View style={styles.centerRow}>
                       <Text
                         style={
                           containsArabicScript(visitor.company)
-                            ? [styles.companyText, styles.rtlText]
+                            ? [styles.companyText, styles.rtlCenterText]
                             : [styles.companyText]
                         }
                       >
                         {visitor.company}
                       </Text>
+                    </View>
                     ) : null}
                   </View>
+
+                  <View style={styles.spacer} />
+
+                  {visitor.shortCode ? (
+                    <Text style={styles.shortCodeText}>{visitor.shortCode}</Text>
+                  ) : null}
+                  <Image src={qrDataUrls.get(visitor.qrToken)} style={styles.qr} />
                 </View>
               </View>
             );
@@ -340,9 +325,9 @@ function GuestBadgesDocument({
       {pages.map((pageVisitors, pageIndex) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: pages are a static, non-reorderable chunking of the input list
         <Page key={pageIndex} size="LETTER" style={styles.page}>
-          {pageVisitors.map((visitor, visitorIndex) => {
-            const isLastCol = (visitorIndex + 1) % BADGES_PER_ROW === 0;
-            const isLastRow = visitorIndex >= pageVisitors.length - BADGES_PER_ROW;
+          {pageVisitors.map((visitor, i) => {
+            const isLastCol = (i + 1) % BADGES_PER_ROW === 0;
+            const isLastRow = i >= pageVisitors.length - BADGES_PER_ROW;
             return (
               <View
                 key={visitor.id}
@@ -355,16 +340,16 @@ function GuestBadgesDocument({
               >
                 <View style={styles.badgeContent}>
                   <BadgeLogos logoSource={logoSource} />
+
+                  <View style={styles.spacer} />
+
+                  <Text style={[styles.guestText, styles.rtlCenterText]}>
+                    {formatGuestBadgeLabel()}
+                  </Text>
                   {visitor.shortCode ? (
                     <Text style={styles.shortCodeText}>{visitor.shortCode}</Text>
                   ) : null}
                   <Image src={qrDataUrls.get(visitor.qrToken)} style={styles.qr} />
-
-                  <View style={styles.textColumn}>
-                    <Text style={[styles.guestText, styles.guestLabel, styles.rtlText]}>
-                      {formatGuestBadgeLabel()}
-                    </Text>
-                  </View>
                 </View>
               </View>
             );
