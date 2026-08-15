@@ -26,17 +26,30 @@ import { getLocalUploadPathFromUrl } from "@/lib/uploads";
 
 const PT_PER_IN = 72;
 const PAGE_MARGIN = 0.4 * PT_PER_IN;
-const BADGE_GAP = 0.2 * PT_PER_IN;
-const BADGES_PER_ROW = 2;
-const ROWS_PER_PAGE = 4;
-const BADGES_PER_PAGE = BADGES_PER_ROW * ROWS_PER_PAGE;
 const PDF_FONT_FAMILY = "Noto Sans Arabic";
 const ARABIC_SCRIPT_PATTERN = /\p{Script=Arabic}/u;
+
+const PAGE_WIDTH = 8.5 * PT_PER_IN;
+const PAGE_HEIGHT = 11 * PT_PER_IN;
+
+const BADGE_GAP = 0.2 * PT_PER_IN;
+const BADGES_PER_ROW = 2;
+const ROWS_PER_PAGE = 2;
+const BADGES_PER_PAGE = BADGES_PER_ROW * ROWS_PER_PAGE;
+
+const USABLE_WIDTH = PAGE_WIDTH - 2 * PAGE_MARGIN;
+const USABLE_HEIGHT = PAGE_HEIGHT - 2 * PAGE_MARGIN;
+
+const BADGE_WIDTH = (USABLE_WIDTH - (BADGES_PER_ROW - 1) * BADGE_GAP) / BADGES_PER_ROW;
+const BADGE_HEIGHT = (USABLE_HEIGHT - (ROWS_PER_PAGE - 1) * BADGE_GAP) / ROWS_PER_PAGE;
+
 const CARD_WIDTH = 3.5 * PT_PER_IN;
 const CARD_HEIGHT = 2.25 * PT_PER_IN;
-const BADGE_SCALE = 1.4;
-const BADGE_WIDTH = CARD_HEIGHT * BADGE_SCALE;
-const BADGE_HEIGHT = CARD_WIDTH * BADGE_SCALE;
+
+const BADGE_SCALE = Math.min(BADGE_WIDTH / CARD_HEIGHT, BADGE_HEIGHT / CARD_WIDTH);
+
+
+
 function resolvePublicFilePath(...segments: string[]): string | undefined {
   const candidates = [
     join(process.cwd(), "public", ...segments),
@@ -202,6 +215,8 @@ const styles = StyleSheet.create({
     textAlign: "right",
     marginBottom: 16,
   },
+  noRightGap: { marginRight: 0 },
+  noBottomGap: { marginBottom: 0 },
 });
 
 async function makeQrDataUrl(qrToken: string): Promise<string> {
@@ -246,9 +261,19 @@ function InvitedBadgesDocument({
       {pages.map((pageVisitors, pageIndex) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: pages are a static, non-reorderable chunking of the input list
         <Page key={pageIndex} size="LETTER" style={styles.page}>
-        {pageVisitors.map((visitor) => {
+        {pageVisitors.map((visitor, i) => {
+            const isLastCol = (i + 1) % BADGES_PER_ROW === 0;
+            const isLastRow = i >= pageVisitors.length - BADGES_PER_ROW;
             return (
-              <View key={visitor.id} style={styles.badge} wrap={false}>
+              <View
+                key={visitor.id}
+                style={[
+                  styles.badge,
+                  ...(isLastCol ? [styles.noRightGap] : []),
+                  ...(isLastRow ? [styles.noBottomGap] : []),
+                ]}
+                wrap={false}
+              >
                 <View style={styles.badgeContent}>
                   <BadgeLogos logoSource={logoSource} />
                   {visitor.shortCode ? (
