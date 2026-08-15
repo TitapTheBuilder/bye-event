@@ -48,7 +48,29 @@ const CARD_HEIGHT = 2.25 * PT_PER_IN;
 
 const BADGE_SCALE = Math.min(BADGE_WIDTH / CARD_HEIGHT, BADGE_HEIGHT / CARD_WIDTH);
 
+// Two solid color bars along the left/right edges of each badge, driven by
+// visitor.color (e.g. "purple", "blue", ...). COLOR_BAR_INSET is subtracted
+// from badgeContent's horizontal padding so the name/company/QR never
+// overlap the bars.
+const COLOR_BAR_WIDTH = BADGE_WIDTH * 0.12;
+const COLOR_BAR_INSET = COLOR_BAR_WIDTH + 10;
 
+const VISITOR_COLOR_HEX: Record<string, string> = {
+  purple: "#7732D2",
+  pink: "#EE3A9D",
+  blue: "#3884FF",
+  white: "#D2E3EF",
+  orange: "#FF5F2E",
+  green: "#1ECC6A",
+  red: "#E22D30",
+  yellow: "#FFC800",
+};
+const DEFAULT_BADGE_COLOR_HEX = "#CCCCCC";
+
+function resolveBadgeColorHex(color: string | null | undefined): string {
+  if (!color) return DEFAULT_BADGE_COLOR_HEX;
+  return VISITOR_COLOR_HEX[color] ?? DEFAULT_BADGE_COLOR_HEX;
+}
 
 function resolvePublicFilePath(...segments: string[]): string | undefined {
   const candidates = [
@@ -125,13 +147,28 @@ const styles = StyleSheet.create({
     position: "relative",
     overflow: "hidden",
   },
+  colorBar: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    width: COLOR_BAR_WIDTH,
+  },
+  colorBarLeft: {
+    left: 0,
+  },
+  colorBarRight: {
+    right: 0,
+  },
   badgeContent: {
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    padding: 20,
+    paddingTop: 20,
+    paddingBottom: 20,
+    paddingLeft: COLOR_BAR_INSET,
+    paddingRight: COLOR_BAR_INSET,
     flexDirection: "column",
   },
   logoStrip: {
@@ -234,6 +271,16 @@ function BadgeLogos({ logoSource }: Pick<BadgeDocumentProps, "logoSource">) {
   );
 }
 
+function BadgeColorBars({ color }: { color: string | null | undefined }) {
+  const hex = resolveBadgeColorHex(color);
+  return (
+    <>
+      <View style={[styles.colorBar, styles.colorBarLeft, { backgroundColor: hex }]} />
+      <View style={[styles.colorBar, styles.colorBarRight, { backgroundColor: hex }]} />
+    </>
+  );
+}
+
 export function formatGuestBadgeLabel(): string {
   return `مهمان`;
 }
@@ -264,36 +311,37 @@ function InvitedBadgesDocument({
                 ]}
                 wrap={false}
               >
+                <BadgeColorBars color={visitor.color} />
                 <View style={styles.badgeContent}>
                   <BadgeLogos logoSource={logoSource} />
 
                   <View style={styles.identityBlock}>
                     {fullName ? (
-                    <View style={styles.centerRow}>
-                      <Text
-                        style={
-                          containsArabicScript(fullName)
-                            ? [styles.prominentText, styles.rtlCenterText]
-                            : [styles.prominentText]
-                        }
-                      >
-                        {fullName}
-                      </Text>
-                    </View>
+                      <View style={styles.centerRow}>
+                        <Text
+                          style={
+                            containsArabicScript(fullName)
+                              ? [styles.prominentText, styles.rtlCenterText]
+                              : [styles.prominentText]
+                          }
+                        >
+                          {fullName}
+                        </Text>
+                      </View>
                     ) : null}
 
                     {visitor.company ? (
-                    <View style={styles.centerRow}>
-                      <Text
-                        style={
-                          containsArabicScript(visitor.company)
-                            ? [styles.companyText, styles.rtlCenterText]
-                            : [styles.companyText]
-                        }
-                      >
-                        {visitor.company}
-                      </Text>
-                    </View>
+                      <View style={styles.centerRow}>
+                        <Text
+                          style={
+                            containsArabicScript(visitor.company)
+                              ? [styles.companyText, styles.rtlCenterText]
+                              : [styles.companyText]
+                          }
+                        >
+                          {visitor.company}
+                        </Text>
+                      </View>
                     ) : null}
                   </View>
 
@@ -338,6 +386,7 @@ function GuestBadgesDocument({
                 ]}
                 wrap={false}
               >
+                <BadgeColorBars color={visitor.color} />
                 <View style={styles.badgeContent}>
                   <BadgeLogos logoSource={logoSource} />
 
