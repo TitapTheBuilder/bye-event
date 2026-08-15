@@ -12,6 +12,7 @@ export default defineConfig({
   },
   test: {
     environment: "happy-dom",
+    exclude: ["**/.next/**", "**/node_modules/**"],
     env: {
       DATABASE_URL: "postgres://build:build@127.0.0.1:5432/build"
     },

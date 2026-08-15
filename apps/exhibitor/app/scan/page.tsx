@@ -3,9 +3,9 @@
 import { ScanFrameOverlay } from "@/components/ScanFrameOverlay";
 import { recordScan } from "@/lib/offline/scan";
 import { useTranslation } from "@/lib/client/language-context";
+import jsQR from "jsqr";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type QrScannerType from "qr-scanner";
 
 type CameraState = "starting" | "active" | "denied" | "insecure" | "unavailable";
 
@@ -13,111 +13,293 @@ export default function ScanPage() {
   const router = useRouter();
   const { t } = useTranslation();
   const videoRef = useRef<HTMLVideoElement>(null);
-  const scannerRef = useRef<QrScannerType | null>(null);
   const processingRef = useRef(false);
+  const streamRef = useRef<MediaStream | null>(null);
+
   const [cameraState, setCameraState] = useState<CameraState>("starting");
   const [hasFlash, setHasFlash] = useState(false);
   const [flashOn, setFlashOn] = useState(false);
 
+  const logMessage = useCallback((msg: string) => {
+    console.log(`[QR Scanner ${new Date().toLocaleTimeString()}]`, msg);
+  }, []);
+
   const handleDecoded = useCallback(
     async (rawQrToken: string) => {
-      const qrToken = rawQrToken.trim();
+      let qrToken = rawQrToken.trim();
       if (!qrToken || processingRef.current) return;
 
-      // QR decoders can emit multiple callbacks before stop() settles. React
-      // state updates are asynchronous, so use a ref as the synchronous lock.
-      processingRef.current = true;
-      const scanner = scannerRef.current;
-      scanner?.pause(true);
-      scanner?.destroy();
-      if (scannerRef.current === scanner) scannerRef.current = null;
+      // Normalize token if a full URL was encoded
+      if (qrToken.includes("/")) {
+        const segments = qrToken.split("/").filter(Boolean);
+        const last = segments[segments.length - 1];
+        if (last && (last.length === 32 || /^\d{6}$/.test(last))) {
+          qrToken = last;
+        }
+      }
 
-      // Write to the local outbox immediately, unconditionally -- before any
-      // network call, before checking login state.
-      await recordScan(qrToken);
-      router.push(`/visitor/${encodeURIComponent(qrToken)}`);
+      processingRef.current = true;
+      logMessage(`Decoded token: ${qrToken}`);
+
+      // Haptic confirmation
+      if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+        try {
+          navigator.vibrate(50);
+        } catch {}
+      }
+
+      // Stop camera stream tracks
+      if (streamRef.current) {
+        for (const track of streamRef.current.getTracks()) {
+          track.stop();
+        }
+        streamRef.current = null;
+      }
+
+      try {
+        await recordScan(qrToken);
+        router.push(`/visitor/${encodeURIComponent(qrToken)}`);
+      } catch (err) {
+        logMessage(`recordScan error (proceeding to navigate): ${String(err)}`);
+        router.push(`/visitor/${encodeURIComponent(qrToken)}`);
+      }
     },
-    [router],
+    [router, logMessage],
   );
 
   useEffect(() => {
     let cancelled = false;
-    let ownedScanner: QrScannerType | null = null;
+    let animFrameId: number | null = null;
+    let barcodeDetector: {
+      detect: (source: ImageBitmapSource) => Promise<Array<{ rawValue: string }>>;
+    } | null = null;
 
-    async function start() {
+    async function startCamera() {
+      logMessage("Starting camera initialization...");
+
       if (!window.isSecureContext) {
+        logMessage("Error: Context is not secure (requires HTTPS or localhost)");
         setCameraState("insecure");
         return;
       }
+
       if (!navigator.mediaDevices?.getUserMedia) {
+        logMessage("Error: navigator.mediaDevices.getUserMedia is unavailable");
         setCameraState("unavailable");
         return;
       }
 
-      // qr-scanner uses the browser's native BarcodeDetector when
-      // available and transparently falls back to its JS/WASM decoder on
-      // Safari/WebKit.
-      const { default: QrScanner } = await import("qr-scanner");
-      const video = videoRef.current;
-      if (cancelled || !video) return;
+      // 1. Initialize BarcodeDetector if available
+      if (typeof window !== "undefined" && "BarcodeDetector" in window) {
+        try {
+          const detectorClass = (window as unknown as {
+            BarcodeDetector: {
+              new (options: { formats: string[] }): {
+                detect: (source: ImageBitmapSource) => Promise<Array<{ rawValue: string }>>;
+              };
+              getSupportedFormats?: () => Promise<string[]>;
+            };
+          }).BarcodeDetector;
 
-      const scanner = new QrScanner(
-        video,
-        (result) => {
-          if (!cancelled) void handleDecoded(result.data);
+          const supported = (await detectorClass.getSupportedFormats?.()) || [];
+          if (supported.length === 0 || supported.includes("qr_code")) {
+            barcodeDetector = new detectorClass({ formats: ["qr_code"] });
+            logMessage("BarcodeDetector initialized successfully (Hardware engine)");
+          } else {
+            logMessage("BarcodeDetector does not support qr_code format, using jsQR");
+          }
+        } catch (e) {
+          logMessage(`BarcodeDetector init error: ${String(e)}, using jsQR`);
+        }
+      } else {
+        logMessage("Native BarcodeDetector not in window, using jsQR");
+      }
+
+      // 2. Request Camera Stream with fallback hierarchy
+      let stream: MediaStream | null = null;
+      const constraintsList: MediaStreamConstraints[] = [
+        {
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+          audio: false,
         },
         {
-          highlightScanRegion: false,
-          highlightCodeOutline: false,
-          maxScansPerSecond: 10,
+          video: { facingMode: { ideal: "environment" } },
+          audio: false,
         },
-      );
+        {
+          video: true,
+          audio: false,
+        },
+      ];
 
-      ownedScanner = scanner;
-      scannerRef.current = scanner;
+      for (let i = 0; i < constraintsList.length; i++) {
+        try {
+          logMessage(`Requesting camera stream (tier ${i + 1})...`);
+          stream = await navigator.mediaDevices.getUserMedia(constraintsList[i]);
+          if (stream) break;
+        } catch (err) {
+          logMessage(`Tier ${i + 1} stream request failed: ${String(err)}`);
+        }
+      }
+
+      if (cancelled) {
+        if (stream) {
+          for (const track of stream.getTracks()) track.stop();
+        }
+        return;
+      }
+
+      if (!stream) {
+        logMessage("Failed to obtain any camera stream");
+        setCameraState("unavailable");
+        return;
+      }
+
+      streamRef.current = stream;
+      const video = videoRef.current;
+      if (!video) return;
+
+      video.srcObject = stream;
+
+      // Check flash / torch capability & autofocus
+      const [track] = stream.getVideoTracks();
+      if (track) {
+        const capabilities = (track.getCapabilities?.() ?? {}) as {
+          torch?: boolean;
+          focusMode?: string[];
+        };
+        if (capabilities.torch) {
+          setHasFlash(true);
+        }
+        if (capabilities.focusMode?.includes("continuous")) {
+          void track
+            .applyConstraints({
+              advanced: [{ focusMode: "continuous" } as MediaTrackConstraintSet],
+            })
+            .catch(() => {});
+        }
+      }
 
       try {
-        await scanner.start();
-        if (cancelled) {
-          scanner.pause(true);
-          scanner.destroy();
-          return;
-        }
+        await video.play();
         setCameraState("active");
-        const flashSupported = await scanner.hasFlash().catch(() => false);
-        if (!cancelled) setHasFlash(flashSupported);
+        logMessage(`Camera playing: ${video.videoWidth}x${video.videoHeight}`);
       } catch (err) {
-        if (cancelled) return;
-        scanner.destroy();
-        if (scannerRef.current === scanner) scannerRef.current = null;
-        const name = err instanceof Error ? err.name : "";
-        setCameraState(name === "NotAllowedError" ? "denied" : "unavailable");
+        logMessage(`video.play() failed: ${String(err)}`);
+        setCameraState("unavailable");
+        return;
       }
+
+      // 3. Main Scanning Render Loop
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      if (!ctx) {
+        logMessage("Failed to get 2D canvas context");
+        return;
+      }
+
+      let lastScanTime = performance.now();
+
+      const scanLoop = async () => {
+        if (cancelled || processingRef.current) return;
+
+        const now = performance.now();
+
+        // Throttle decoding to ~16 FPS (60ms intervals) to keep device cool & smooth
+        if (now - lastScanTime >= 60 && video.readyState >= 2 && video.videoWidth > 0) {
+          lastScanTime = now;
+
+          const vw = video.videoWidth;
+          const vh = video.videoHeight;
+
+          // Downscale high-resolution cameras (e.g. 4K) to max 800px for optimal speed & zero aliasing
+          const maxDim = 800;
+          const scale = Math.min(1, maxDim / Math.max(vw, vh));
+          const cw = Math.max(1, Math.round(vw * scale));
+          const ch = Math.max(1, Math.round(vh * scale));
+
+          if (canvas.width !== cw || canvas.height !== ch) {
+            canvas.width = cw;
+            canvas.height = ch;
+          }
+
+          ctx.drawImage(video, 0, 0, cw, ch);
+
+          let detected = false;
+
+          // Attempt 1: Native BarcodeDetector (Hardware)
+          if (barcodeDetector) {
+            try {
+              const barcodes = await barcodeDetector.detect(canvas);
+              if (barcodes && barcodes.length > 0 && barcodes[0]?.rawValue) {
+                detected = true;
+                logMessage(`[BarcodeDetector] Scanned code: ${barcodes[0].rawValue}`);
+                void handleDecoded(barcodes[0].rawValue);
+                return;
+              }
+            } catch {
+              // Ignore and gracefully fall back to jsQR
+            }
+          }
+
+          // Attempt 2: jsQR Fallback Engine (Runs on all browsers & platforms)
+          if (!detected) {
+            try {
+              const imageData = ctx.getImageData(0, 0, cw, ch);
+              const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                inversionAttempts: "attemptBoth",
+              });
+              if (code && code.data) {
+                logMessage(`[jsQR] Scanned code: ${code.data}`);
+                void handleDecoded(code.data);
+                return;
+              }
+            } catch (err) {
+              logMessage(`[jsQR Exception] ${String(err)}`);
+            }
+          }
+        }
+
+        if (!cancelled && !processingRef.current) {
+          animFrameId = requestAnimationFrame(scanLoop);
+        }
+      };
+
+      animFrameId = requestAnimationFrame(scanLoop);
     }
 
-    void start();
+    void startCamera();
 
     return () => {
       cancelled = true;
-      const scanner = ownedScanner;
-      ownedScanner = null;
-      if (scanner) {
-        scanner.pause(true);
-        scanner.destroy();
-        if (scannerRef.current === scanner) scannerRef.current = null;
+      if (animFrameId !== null) {
+        cancelAnimationFrame(animFrameId);
       }
-
-      const stream = videoRef.current?.srcObject;
-      if (stream instanceof MediaStream) {
-        for (const track of stream.getTracks()) track.stop();
+      if (streamRef.current) {
+        for (const track of streamRef.current.getTracks()) track.stop();
+        streamRef.current = null;
       }
     };
-  }, [handleDecoded]);
+  }, [handleDecoded, logMessage]);
 
   async function toggleFlash() {
-    if (!scannerRef.current) return;
-    await scannerRef.current.toggleFlash();
-    setFlashOn(scannerRef.current.isFlashOn());
+    if (!streamRef.current) return;
+    const [track] = streamRef.current.getVideoTracks();
+    if (!track) return;
+    const next = !flashOn;
+    try {
+      await track.applyConstraints({
+        advanced: [{ torch: next } as MediaTrackConstraintSet],
+      });
+      setFlashOn(next);
+      logMessage(`Torch toggled: ${next}`);
+    } catch (err) {
+      logMessage(`Failed to toggle torch: ${String(err)}`);
+    }
   }
 
   return (
@@ -128,6 +310,7 @@ export default function ScanPage() {
           className="absolute inset-0 h-full w-full object-cover"
           muted
           playsInline
+          autoPlay
         />
         {cameraState === "active" ? <ScanFrameOverlay /> : null}
 
